@@ -3,6 +3,7 @@ package com.anonymous.gitlaneapp.ui
 import android.app.Activity
 import android.content.Intent
 import android.os.Bundle
+import android.view.View
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
@@ -44,9 +45,41 @@ class DashboardActivity : AppCompatActivity() {
         setupRecyclerView()
         setupCreateButton()
         setupCloneButton()
+        setupFetchGithubButton()
         setupSettingsButton()
         setupScanFab()
         loadRepos()
+
+        checkFirstRun()
+    }
+
+    private fun checkFirstRun() {
+        val creds = com.anonymous.gitlaneapp.CredentialsManager(this)
+        if (!creds.hasAnyToken()) {
+            androidx.appcompat.app.AlertDialog.Builder(this)
+                .setTitle("Welcome to GitLane!")
+                .setMessage("To clone private repositories and retrieve your GitHub projects, you'll need a Personal Access Token (PAT). Would you like to set one up now?")
+                .setPositiveButton("Set PAT") { _, _ ->
+                    startActivity(Intent(this, SettingsActivity::class.java))
+                }
+                .setNegativeButton("Later", null)
+                .show()
+        }
+    }
+
+    private fun setupFetchGithubButton() {
+        binding.btnFetchGithub.setOnClickListener {
+            val creds = com.anonymous.gitlaneapp.CredentialsManager(this)
+            val token = creds.getPat("github.com")
+            if (token == null) {
+                Toast.makeText(this, "Please set a GitHub token in Settings first", Toast.LENGTH_SHORT).show()
+                startActivity(Intent(this, SettingsActivity::class.java))
+                return@setOnClickListener
+            }
+            // Start GitHub Repo listing activity
+            val intent = Intent(this, GitHubRepoListActivity::class.java)
+            refreshLauncher.launch(intent)
+        }
     }
 
     override fun onResume() {
@@ -121,7 +154,7 @@ class DashboardActivity : AppCompatActivity() {
                     try {
                         git.duplicateRepo(repoDir)
                         loadRepos()
-                        Toast.makeText(this@DashboardActivity, "✅ Duduplicated successfully", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(this@DashboardActivity, "✅ Duplicate successfully", Toast.LENGTH_SHORT).show()
                     } catch (e: Exception) {
                         Toast.makeText(this@DashboardActivity, "❌ ${e.message}", Toast.LENGTH_SHORT).show()
                     }

@@ -8,7 +8,9 @@ import androidx.recyclerview.widget.RecyclerView
 import com.anonymous.gitlaneapp.databinding.ItemFileBinding
 import java.io.File
 
-class FileAdapter : ListAdapter<File, FileAdapter.FileViewHolder>(FileDiffCallback()) {
+class FileAdapter(
+    private val onClick: (File) -> Unit
+) : ListAdapter<File, FileAdapter.FileViewHolder>(FileDiffCallback()) {
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): FileViewHolder {
         val binding = ItemFileBinding.inflate(LayoutInflater.from(parent.context), parent, false)
@@ -25,6 +27,10 @@ class FileAdapter : ListAdapter<File, FileAdapter.FileViewHolder>(FileDiffCallba
         fun bind(file: File) {
             binding.tvFileName.text = file.name
             binding.tvFileIcon.text = if (file.isDirectory) "📁" else "📄"
+            
+            binding.root.setOnClickListener {
+                onClick(file)
+            }
         }
     }
 

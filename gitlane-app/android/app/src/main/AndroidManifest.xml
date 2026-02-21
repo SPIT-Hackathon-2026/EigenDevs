@@ -71,6 +71,16 @@
             android:name=".ui.RemoteActivity"
             android:label="Remotes" />
 
+        <!-- File Editor — view/edit file content -->
+        <activity
+            android:name=".ui.FileEditorActivity"
+            android:label="Edit File"
+            android:windowSoftInputMode="adjustResize" />
+
+        <activity
+            android:name=".ui.GitHubRepoListActivity"
+            android:label="Select GitHub Repository" />
+
         <!-- ZXing Scanner -->
         <activity
             android:name="com.journeyapps.barcodescanner.CaptureActivity"

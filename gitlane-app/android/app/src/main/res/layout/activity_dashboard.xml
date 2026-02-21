@@ -85,7 +85,8 @@
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:orientation="horizontal">
+                android:orientation="horizontal"
+                android:layout_marginBottom="8dp">
 
                 <com.google.android.material.button.MaterialButton
                     android:id="@+id/btnCreateRepo"
@@ -108,6 +109,15 @@
                     android:textColor="@color/accent"
                     app:cornerRadius="10dp" />
             </LinearLayout>
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnFetchGithub"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="🌐 Fetch GitHub Repos"
+                style="@style/Widget.Material3.Button.TextButton"
+                android:textColor="@color/text_primary"
+                android:textAllCaps="false" />
         </LinearLayout>
     </com.google.android.material.card.MaterialCardView>
 

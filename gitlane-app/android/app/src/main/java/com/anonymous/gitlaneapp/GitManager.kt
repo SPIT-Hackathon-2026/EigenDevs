@@ -143,6 +143,21 @@ class GitManager(context: Context) {
         try { openGit(repoDir).use { it.log().call().count() } } catch (e: Exception) { 0 }
     }
 
+    suspend fun getStatus(repoDir: File): GitStatus = withContext(Dispatchers.IO) {
+        try {
+            openGit(repoDir).use { git ->
+                val s = git.status().call()
+                GitStatus(
+                    modified = (s.modified + s.changed).toList().sorted(),
+                    untracked = s.untracked.toList().sorted(),
+                    added = s.added.toList().sorted(),
+                    removed = (s.removed + s.missing).toList().sorted(),
+                    conflicting = s.conflicting.toList().sorted()
+                )
+            }
+        } catch (e: Exception) { GitStatus() }
+    }
+
     // ═══════════════════════════════════════════════════════════════════════════
     // BRANCH MANAGEMENT
     // ═══════════════════════════════════════════════════════════════════════════
@@ -400,3 +415,16 @@ data class RemoteInfo(
 )
 
 data class AheadBehind(val ahead: Int, val behind: Int)
+
+data class GitStatus(
+    val modified: List<String> = emptyList(),
+    val untracked: List<String> = emptyList(),
+    val added: List<String> = emptyList(),
+    val removed: List<String> = emptyList(),
+    val conflicting: List<String> = emptyList()
+) {
+    fun hasChanges() = modified.isNotEmpty() || untracked.isNotEmpty() || 
+                       added.isNotEmpty() || removed.isNotEmpty() || conflicting.isNotEmpty()
+                       
+    fun allChanges() = (modified + untracked + added + removed).distinct().sorted()
+}
