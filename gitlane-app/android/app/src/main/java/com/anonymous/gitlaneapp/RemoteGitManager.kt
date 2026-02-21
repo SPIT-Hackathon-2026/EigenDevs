@@ -64,7 +64,6 @@ class RemoteGitManager(context: Context) {
                 override fun update(completed: Int) {}
                 override fun endTask() {}
                 override fun isCancelled() = false
-                override fun showDuration(enabled: Boolean) {}
             })
         }
 
