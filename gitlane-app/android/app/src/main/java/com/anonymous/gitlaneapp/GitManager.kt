@@ -5,13 +5,17 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.eclipse.jgit.api.Git
 import org.eclipse.jgit.api.ListBranchCommand
+import org.eclipse.jgit.api.MergeCommand
 import org.eclipse.jgit.api.MergeResult
 import org.eclipse.jgit.api.ResetCommand
+import org.eclipse.jgit.internal.storage.file.FileRepository
+import org.eclipse.jgit.internal.storage.file.GC
 import org.eclipse.jgit.lib.BranchTrackingStatus
 import org.eclipse.jgit.lib.PersonIdent
 import org.eclipse.jgit.lib.Repository
 import org.eclipse.jgit.revwalk.RevWalk
 import org.eclipse.jgit.storage.file.FileRepositoryBuilder
+import org.eclipse.jgit.storage.pack.PackConfig
 import org.eclipse.jgit.transport.RefSpec
 import org.eclipse.jgit.transport.RemoteConfig
 import org.eclipse.jgit.transport.URIish
@@ -128,7 +132,11 @@ class GitManager(context: Context) {
                         message = rev.shortMessage,
                         author  = rev.authorIdent.name,
                         date    = SimpleDateFormat("dd MMM yyyy HH:mm", Locale.getDefault())
-                            .format(Date(rev.commitTime * 1000L))
+                            .format(Date(rev.commitTime * 1000L)),
+                        parents = rev.parents.map { it.abbreviate(8).name() },
+                        isConflict = rev.fullMessage.contains("Conflict", ignoreCase = true) || 
+                                     rev.fullMessage.contains("Resolved", ignoreCase = true) ||
+                                     rev.parentCount > 1 && rev.fullMessage.lowercase().contains("merge")
                     )
                 }
             }
@@ -279,6 +287,71 @@ class GitManager(context: Context) {
         }
 
     // ═══════════════════════════════════════════════════════════════════════════
+    // TAG MANAGEMENT
+    // ═══════════════════════════════════════════════════════════════════════════
+
+    /** List all local tags. */
+    suspend fun listTags(repoDir: File): List<TagInfo> = withContext(Dispatchers.IO) {
+        try {
+            openGit(repoDir).use { git ->
+                git.tagList().call().map { ref ->
+                    val name = ref.name.removePrefix("refs/tags/")
+                    val walk = RevWalk(git.repository)
+                    val commit = walk.parseCommit(ref.objectId)
+                    TagInfo(
+                        name = name,
+                        sha = commit.abbreviate(8).name(),
+                        date = SimpleDateFormat("dd MMM yyyy", Locale.getDefault())
+                            .format(Date(commit.commitTime * 1000L))
+                    )
+                }
+            }
+        } catch (e: Exception) { emptyList() }
+    }
+
+    /** Create a new tag. message is optional (annotated tag if set). */
+    suspend fun createTag(repoDir: File, tagName: String, message: String? = null) = withContext(Dispatchers.IO) {
+        openGit(repoDir).use { git ->
+            val cmd = git.tag().setName(tagName)
+            if (!message.isNullOrBlank()) {
+                cmd.setMessage(message)
+                cmd.setTagger(defaultAuthor)
+            }
+            cmd.call()
+        }
+    }
+
+    /** Delete a local tag. */
+    suspend fun deleteTag(repoDir: File, tagName: String) = withContext(Dispatchers.IO) {
+        openRepo(repoDir).use { repo ->
+            val ref = repo.findRef("refs/tags/$tagName")
+            if (ref != null) {
+                val update = repo.updateRef(ref.name)
+                update.setForceUpdate(true)
+                update.delete()
+            }
+        }
+    }
+
+    /** Push a specific tag to a remote. */
+    suspend fun pushTag(
+        repoDir: File,
+        remote: String = "origin",
+        tagName: String,
+        pat: String? = null
+    ) = withContext(Dispatchers.IO) {
+        openGit(repoDir).use { git ->
+            val cmd = git.push()
+                .setRemote(remote)
+                .setRefSpecs(RefSpec("refs/tags/$tagName:refs/tags/$tagName"))
+            if (!pat.isNullOrBlank()) {
+                cmd.setCredentialsProvider(UsernamePasswordCredentialsProvider(pat, ""))
+            }
+            cmd.call()
+        }
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════════
     // REMOTE MANAGEMENT
     // ═══════════════════════════════════════════════════════════════════════════
 
@@ -379,6 +452,104 @@ class GitManager(context: Context) {
     }
 
     // ═══════════════════════════════════════════════════════════════════════════
+    // MERGE & CONFLICTS
+    // ═══════════════════════════════════════════════════════════════════════════
+
+    /**
+     * Merge [sourceBranch] into the current branch.
+     * Returns true if successful, false if there are conflicts.
+     */
+    suspend fun merge(repoDir: File, sourceBranch: String): MergeResult = withContext(Dispatchers.IO) {
+        openGit(repoDir).use { git ->
+            val sourceRef = git.repository.findRef(sourceBranch)
+                ?: throw IllegalArgumentException("Branch '$sourceBranch' not found")
+            
+            git.merge()
+                .include(sourceRef)
+                .setFastForward(MergeCommand.FastForwardMode.FF)
+                .call()
+        }
+    }
+
+    /** Abort an ongoing merge conflict. */
+    suspend fun abortMerge(repoDir: File) = withContext(Dispatchers.IO) {
+        openGit(repoDir).use { git ->
+            git.reset().setMode(ResetCommand.ResetType.HARD).call()
+        }
+    }
+
+    /**
+     * Get the content of a file at a specific stage in the index.
+     * Stage 1: Base (Common Ancestor)
+     * Stage 2: Ours (HEAD)
+     * Stage 3: Theirs (Incoming)
+     */
+    suspend fun getConflictStageContent(repoDir: File, path: String, stage: Int): String? = withContext(Dispatchers.IO) {
+        try {
+            openRepo(repoDir).use { repo ->
+                // JGit's DirCache doesn't make it super easy to get specific stage content directly by stage int
+                val dc = repo.readDirCache()
+                val entry = dc.getEntry(path) ?: return@withContext null
+                
+                // JGit's DirCache doesn't make it super easy to get specific stage content directly by stage int
+                // We need to find the DirCacheEntry with the correct stage
+                for (i in 0 until dc.entryCount) {
+                    val e = dc.getEntry(i)
+                    if (e.pathString == path && e.stage == stage) {
+                        val loader = repo.open(e.objectId)
+                        return@withContext String(loader.bytes, Charsets.UTF_8)
+                    }
+                }
+                null
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+            null
+        }
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════════
+    // MOBILE STORAGE OPTIMIZATION (DELTA COMPRESSION)
+    // ═══════════════════════════════════════════════════════════════════════════
+
+    /**
+     * Triggers Garbage Collection (GC) to pack loose objects and apply 
+     * delta compression. Configured specifically for low-memory mobile devices.
+     */
+    suspend fun optimizeStorage(repoDir: File): Boolean = withContext(Dispatchers.IO) {
+        try {
+            val repo = openRepo(repoDir) 
+            
+            // JGit's GC class handles packing and delta compression
+            val gc = GC(repo as FileRepository)
+
+            // 🚀 The Hackathon Brownie Points: Mobile-Optimized PackConfig
+            val packConfig = PackConfig().apply {
+                // 1. Limit memory used for caching
+                setDeltaCacheSize(2 * 1024 * 1024) 
+                
+                // 2. Reduce the delta search window.
+                deltaSearchWindowSize = 10 
+                
+                // 3. Prevent deep delta chains
+                maxDeltaDepth = 50 
+                
+                // 4. Force single-threaded compression
+                threads = 1 
+            }
+            
+            gc.setPackConfig(packConfig)
+            
+            // Execute the compression
+            gc.gc()
+            true
+        } catch (e: Exception) {
+            e.printStackTrace()
+            false
+        }
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════════
     // HELPERS
     // ═══════════════════════════════════════════════════════════════════════════
 
@@ -397,7 +568,9 @@ data class CommitInfo(
     val sha: String,
     val message: String,
     val author: String,
-    val date: String
+    val date: String,
+    val parents: List<String> = emptyList(),
+    val isConflict: Boolean = false
 )
 
 data class BranchInfo(
@@ -412,6 +585,12 @@ data class RemoteInfo(
     val name: String,
     val fetchUrl: String,
     val pushUrl: String
+)
+
+data class TagInfo(
+    val name: String,
+    val sha: String,
+    val date: String
 )
 
 data class AheadBehind(val ahead: Int, val behind: Int)

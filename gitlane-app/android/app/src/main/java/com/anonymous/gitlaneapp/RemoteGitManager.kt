@@ -57,11 +57,26 @@ class RemoteGitManager(context: Context) {
 
         if (progress != null) {
             cloneCmd.setProgressMonitor(object : ProgressMonitor {
+                private var total = 0
+                private var current = 0
+                private var lastTitle = ""
+
                 override fun start(totalTasks: Int) {}
                 override fun beginTask(title: String?, totalWork: Int) {
-                    progress(title ?: "Cloning…", 0)
+                    lastTitle = title ?: "Cloning…"
+                    total = totalWork
+                    current = 0
+                    progress(lastTitle, 0)
                 }
-                override fun update(completed: Int) {}
+
+                override fun update(completed: Int) {
+                    if (total > 0) {
+                        current += completed
+                        val pct = (current * 100) / total
+                        progress(lastTitle, pct)
+                    }
+                }
+
                 override fun endTask() {}
                 override fun isCancelled() = false
             })

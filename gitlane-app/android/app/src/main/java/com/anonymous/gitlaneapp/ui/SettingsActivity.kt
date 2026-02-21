@@ -1,138 +1,161 @@
 package com.anonymous.gitlaneapp.ui
 
 import android.os.Bundle
-import android.widget.*
-import androidx.appcompat.app.AlertDialog
-import androidx.appcompat.app.AppCompatActivity
-import com.anonymous.gitlaneapp.CredentialsManager
-import com.anonymous.gitlaneapp.R
+import android.widget.Toast
+import androidx.activity.ComponentActivity
+import androidx.activity.compose.setContent
+import androidx.compose.foundation.layout.*
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Save
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
+import com.anonymous.gitlaneapp.data.SettingsRepository
 
-/**
- * Settings screen — manage Personal Access Tokens per hosting service.
- * Tokens are stored encrypted via CredentialsManager.
- */
-class SettingsActivity : AppCompatActivity() {
-
-    private lateinit var creds: CredentialsManager
-
+class SettingsActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_settings)
-        supportActionBar?.title = "Settings — Auth Tokens"
-        supportActionBar?.setDisplayHomeAsUpEnabled(true)
+        val settings = SettingsRepository(this)
 
-        creds = CredentialsManager(this)
-        refreshTokenList()
-
-        // Pre-fill buttons for the three main services
-        listOf(
-            R.id.btnAddGithub    to "github.com",
-            R.id.btnAddGitlab    to "gitlab.com",
-            R.id.btnAddBitbucket to "bitbucket.org"
-        ).forEach { (btnId, host) ->
-            findViewById<Button>(btnId).setOnClickListener {
-                showAddTokenDialog(host)
-            }
-        }
-
-        findViewById<Button>(R.id.btnAddCustom).setOnClickListener {
-            showAddCustomHostDialog()
+        setContent {
+            SettingsScreen(
+                settings = settings,
+                onBack = { finish() }
+            )
         }
     }
+}
 
-    override fun onSupportNavigateUp(): Boolean { finish(); return true }
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun SettingsScreen(settings: SettingsRepository, onBack: () -> Unit) {
+    val context = androidx.compose.ui.platform.LocalContext.current
+    var apiKey by remember { mutableStateOf(settings.getGroqApiKey() ?: "") }
+    var selectedModel by remember { mutableStateOf(settings.getGroqModel()) }
+    val models = listOf(
+        "llama-3.3-70b-versatile",
+        "llama-3.1-8b-instant",
+        "mixtral-8x7b-32768",
+        "gemma2-9b-it"
+    )
 
-    private fun refreshTokenList() {
-        val container = findViewById<LinearLayout>(R.id.llTokenList)
-        container.removeAllViews()
+    MaterialTheme(
+        colorScheme = darkColorScheme(
+            primary = Color(0xFF3B82F6),
+            surface = Color(0xFF1E293B),
+            background = Color(0xFF0F172A)
+        )
+    ) {
+        Scaffold(
+            topBar = {
+                TopAppBar(
+                    title = { Text("Settings") },
+                    navigationIcon = {
+                        IconButton(onClick = onBack) {
+                            Icon(Icons.AutoMirrored.Filled.ArrowBack, null)
+                        }
+                    },
+                    colors = TopAppBarDefaults.topAppBarColors(containerColor = Color(0xFF1E293B))
+                )
+            },
+            floatingActionButton = {
+                ExtendedFloatingActionButton(
+                    onClick = {
+                        settings.saveGroqApiKey(apiKey)
+                        settings.saveGroqModel(selectedModel)
+                        onBack()
+                    },
+                    containerColor = Color(0xFF22C55E),
+                    contentColor = Color.White
+                ) {
+                    Icon(Icons.Default.Save, null)
+                    Spacer(Modifier.width(8.dp))
+                    Text("Save Settings")
+                }
+            },
+            containerColor = Color(0xFF0F172A)
+        ) { padding ->
+            Column(
+                modifier = Modifier
+                    .padding(padding)
+                    .padding(16.dp)
+                    .fillMaxSize(),
+                verticalArrangement = Arrangement.spacedBy(24.dp)
+            ) {
+                Text(
+                    "AI Merge Assistant (Groq)",
+                    style = MaterialTheme.typography.titleLarge,
+                    color = Color.White
+                )
 
-        val tokens = creds.listAll()
-        if (tokens.isEmpty()) {
-            val tv = TextView(this).apply {
-                text = "No tokens saved yet.\nAdd a token below to enable clone, push & pull."
-                textSize = 13f
-                setPadding(0, 8, 0, 8)
-                setTextColor(resources.getColor(R.color.text_secondary, theme))
-            }
-            container.addView(tv)
-            return
-        }
+                OutlinedTextField(
+                    value = apiKey,
+                    onValueChange = { apiKey = it },
+                    label = { Text("Groq API Key") },
+                    modifier = Modifier.fillMaxWidth(),
+                    placeholder = { Text("gsk_...") },
+                    singleLine = true,
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedTextColor = Color.White,
+                        unfocusedTextColor = Color.White
+                    )
+                )
 
-        tokens.forEach { (host, masked) ->
-            val row = layoutInflater.inflate(R.layout.item_token_row, container, false)
-            row.findViewById<TextView>(R.id.tvTokenHost).text =
-                CredentialsManager.serviceLabel(host)
-            row.findViewById<TextView>(R.id.tvTokenUrl).text = host
-            row.findViewById<TextView>(R.id.tvTokenMasked).text = masked
-            row.findViewById<Button>(R.id.btnDeleteToken).setOnClickListener {
-                AlertDialog.Builder(this)
-                    .setTitle("Remove token for $host?")
-                    .setMessage("You will need to re-add it to access private repos on $host.")
-                    .setPositiveButton("Remove") { _, _ ->
-                        creds.deletePat(host)
-                        refreshTokenList()
-                        Toast.makeText(this, "Token for $host removed", Toast.LENGTH_SHORT).show()
+                Text("Select Model", color = Color.Gray, style = MaterialTheme.typography.labelMedium)
+                
+                models.forEach { model ->
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.Start
+                    ) {
+                        RadioButton(
+                            selected = (model == selectedModel),
+                            onClick = { selectedModel = model }
+                        )
+                        Text(
+                            text = model,
+                            modifier = Modifier.padding(start = 8.dp).padding(vertical = 12.dp),
+                            color = Color.White
+                        )
                     }
-                    .setNegativeButton("Cancel", null)
-                    .show()
-            }
-            container.addView(row)
-        }
-    }
-
-    private fun showAddTokenDialog(host: String) {
-        val input = EditText(this).apply {
-            hint = "Paste your PAT here"
-            inputType = android.text.InputType.TYPE_CLASS_TEXT or
-                    android.text.InputType.TYPE_TEXT_VARIATION_PASSWORD
-        }
-        AlertDialog.Builder(this)
-            .setTitle("Add token for ${CredentialsManager.serviceLabel(host)}")
-            .setMessage("Generate a Personal Access Token on $host with 'repo' scope.")
-            .setView(input)
-            .setPositiveButton("Save") { _, _ ->
-                val token = input.text.toString().trim()
-                if (token.isBlank()) {
-                    Toast.makeText(this, "Token cannot be empty", Toast.LENGTH_SHORT).show()
-                } else {
-                    creds.savePat(host, token)
-                    refreshTokenList()
-                    Toast.makeText(this, "✅ Token saved for $host", Toast.LENGTH_SHORT).show()
                 }
-            }
-            .setNegativeButton("Cancel", null)
-            .show()
-    }
 
-    private fun showAddCustomHostDialog() {
-        val container = LinearLayout(this).apply {
-            orientation = LinearLayout.VERTICAL
-            setPadding(48, 16, 48, 0)
-        }
-        val etHost = EditText(this).apply { hint = "Host (e.g. git.mycompany.com)" }
-        val etToken = EditText(this).apply {
-            hint = "Personal Access Token"
-            inputType = android.text.InputType.TYPE_CLASS_TEXT or
-                    android.text.InputType.TYPE_TEXT_VARIATION_PASSWORD
-        }
-        container.addView(etHost)
-        container.addView(etToken)
+                Divider(color = Color(0xFF475569))
 
-        AlertDialog.Builder(this)
-            .setTitle("Add Custom Server Token")
-            .setView(container)
-            .setPositiveButton("Save") { _, _ ->
-                val host  = etHost.text.toString().trim()
-                val token = etToken.text.toString().trim()
-                if (host.isBlank() || token.isBlank()) {
-                    Toast.makeText(this, "Host and token cannot be empty", Toast.LENGTH_SHORT).show()
-                } else {
-                    creds.savePat(host, token)
-                    refreshTokenList()
-                    Toast.makeText(this, "✅ Token saved for $host", Toast.LENGTH_SHORT).show()
+                Text(
+                    "Accounts",
+                    style = MaterialTheme.typography.titleLarge,
+                    color = Color.White
+                )
+
+                Button(
+                    onClick = {
+                        val intent = android.content.Intent(context, GitHubOAuthActivity::class.java)
+                        context.startActivity(intent)
+                    },
+                    modifier = Modifier.fillMaxWidth().height(50.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF238636)),
+                    shape = androidx.compose.foundation.shape.RoundedCornerShape(8.dp)
+                ) {
+                    Icon(
+                        androidx.compose.ui.res.painterResource(id = android.R.drawable.ic_lock_power_off), // Placeholder icon
+                        contentDescription = null,
+                        modifier = Modifier.size(20.dp)
+                    )
+                    Spacer(Modifier.width(8.dp))
+                    Text("Connect to GitHub (OAuth)", fontWeight = FontWeight.Bold)
                 }
+
+                Text(
+                    "Your tokens and API keys are stored securely using hardware-backed encryption (EncryptedSharedPreferences).",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = Color.Gray
+                )
             }
-            .setNegativeButton("Cancel", null)
-            .show()
+        }
     }
 }

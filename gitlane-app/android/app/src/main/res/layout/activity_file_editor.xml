@@ -48,6 +48,64 @@
                 android:padding="8dp" />
         </FrameLayout>
 
+        <!-- Conflict Resolution Bar (Hidden by default) -->
+        <LinearLayout
+            android:id="@+id/llConflictActions"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:padding="12dp"
+            android:background="#1AEE4444" 
+            android:visibility="gone">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Conflict Detected"
+                android:textStyle="bold"
+                android:textColor="#EF4444"
+                android:textSize="12sp"
+                android:layout_marginBottom="8dp" />
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal">
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnAcceptCurrent"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="Current"
+                    style="@style/Widget.Material3.Button.TonalButton"
+                    android:textSize="10sp"
+                    android:layout_marginEnd="4dp"
+                    app:cornerRadius="4dp" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnAcceptIncoming"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="Incoming"
+                    style="@style/Widget.Material3.Button.TonalButton"
+                    android:textSize="10sp"
+                    android:layout_marginEnd="4dp"
+                    app:cornerRadius="4dp" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnAcceptBoth"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="Both"
+                    style="@style/Widget.Material3.Button.TonalButton"
+                    android:textSize="10sp"
+                    app:cornerRadius="4dp" />
+            </LinearLayout>
+        </LinearLayout>
+
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"

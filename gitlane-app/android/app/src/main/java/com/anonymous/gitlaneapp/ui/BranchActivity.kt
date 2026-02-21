@@ -53,7 +53,8 @@ class BranchActivity : AppCompatActivity() {
         adapter = BranchAdapter(
             onCheckout = { branch -> checkoutBranch(branch) },
             onDelete   = { branch -> confirmDelete(branch) },
-            onRename   = { branch -> showRenameDialog(branch) }
+            onRename   = { branch -> showRenameDialog(branch) },
+            onMerge    = { branch -> confirmMerge(branch) }
         )
 
         findViewById<RecyclerView>(R.id.rvBranches).apply {
@@ -225,6 +226,36 @@ class BranchActivity : AppCompatActivity() {
                 .show()
         }
     }
+
+    private fun confirmMerge(branch: BranchInfo) {
+        if (branch.isCurrent) return
+        AlertDialog.Builder(this)
+            .setTitle("Merge '${branch.name}'?")
+            .setMessage("This will merge all changes from '${branch.name}' INTO the current branch. Are you sure?")
+            .setPositiveButton("Merge") { _, _ -> mergeBranch(branch.name) }
+            .setNegativeButton("Cancel", null)
+            .show()
+    }
+
+    private fun mergeBranch(name: String) {
+        lifecycleScope.launch {
+            try {
+                val result = git.merge(repoDir, name)
+                if (result.mergeStatus.isSuccessful) {
+                    Toast.makeText(this@BranchActivity, "✅ Merged successfully: ${result.mergeStatus}", Toast.LENGTH_LONG).show()
+                    loadBranches()
+                } else if (result.mergeStatus == org.eclipse.jgit.api.MergeResult.MergeStatus.CONFLICTING) {
+                    Toast.makeText(this@BranchActivity, "🚨 MERGE CONFLICT! Return to repo to resolve.", Toast.LENGTH_LONG).show()
+                    finish() // Close to show conflict in RepoDetail
+                } else {
+                    Toast.makeText(this@BranchActivity, "⚠️ Merge status: ${result.mergeStatus}", Toast.LENGTH_LONG).show()
+                    loadBranches()
+                }
+            } catch (e: Exception) {
+                Toast.makeText(this@BranchActivity, "❌ Error: ${e.message}", Toast.LENGTH_LONG).show()
+            }
+        }
+    }
 }
 
 // ── Adapter ──────────────────────────────────────────────────────────────────
@@ -232,7 +263,8 @@ class BranchActivity : AppCompatActivity() {
 class BranchAdapter(
     private val onCheckout: (BranchInfo) -> Unit,
     private val onDelete:   (BranchInfo) -> Unit,
-    private val onRename:   (BranchInfo) -> Unit
+    private val onRename:   (BranchInfo) -> Unit,
+    private val onMerge:    (BranchInfo) -> Unit
 ) : RecyclerView.Adapter<BranchAdapter.VH>() {
 
     private var items = listOf<BranchInfo>()
@@ -244,6 +276,7 @@ class BranchAdapter(
         val tvStatus:   TextView = v.findViewById(R.id.tvBranchStatus)
         val btnCheck:   Button   = v.findViewById(R.id.btnCheckout)
         val btnRename:  Button   = v.findViewById(R.id.btnRenameBranch)
+        val btnMerge:   Button   = v.findViewById(R.id.btnMergeBranch)
         val btnDelete:  Button   = v.findViewById(R.id.btnDeleteBranch)
     }
 
@@ -261,6 +294,9 @@ class BranchAdapter(
         }
         holder.btnCheck.setOnClickListener  { onCheckout(b) }
         holder.btnRename.setOnClickListener { onRename(b) }
+        holder.btnMerge.setOnClickListener  { onMerge(b) }
         holder.btnDelete.setOnClickListener { onDelete(b) }
+        
+        holder.btnMerge.visibility = if (b.isCurrent) View.GONE else View.VISIBLE
     }
 }

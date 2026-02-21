@@ -36,28 +36,18 @@ class CloneActivity : AppCompatActivity() {
 
         val etUrl       = findViewById<EditText>(R.id.etCloneUrl)
         val etName      = findViewById<EditText>(R.id.etCloneName)
-        val etPat       = findViewById<EditText>(R.id.etClonePat)
         val tvStatus    = findViewById<TextView>(R.id.tvCloneStatus)
         val progressBar = findViewById<ProgressBar>(R.id.cloneProgress)
         val btnClone    = findViewById<Button>(R.id.btnClone)
 
-        // Auto-detect saved PAT when URL changes
-        etUrl.setOnFocusChangeListener { _, hasFocus ->
-            if (!hasFocus) {
-                val url = etUrl.text.toString().trim()
-                val savedPat = creds.getPatForUrl(url)
-                if (!savedPat.isNullOrBlank() && etPat.text.isBlank()) {
-                    etPat.setText(savedPat)
-                    tvStatus.text = "✅ Saved token loaded for ${CredentialsManager.extractHost(url)}"
-                }
-            }
-        }
+        // Handle pre-filled data (e.g. from GitHub search)
+        intent.getStringExtra("prefill_url")?.let { etUrl.setText(it) }
+        intent.getStringExtra("prefill_name")?.let { etName.setText(it) }
 
         btnClone.setOnClickListener {
             val url  = etUrl.text.toString().trim()
             val name = etName.text.toString().trim().ifBlank { null }
-            val pat  = etPat.text.toString().trim().ifBlank { null }
-                ?: creds.getPatForUrl(url)
+            val pat  = creds.getPatForUrl(url)
 
             if (url.isBlank()) {
                 etUrl.error = "Enter a repository URL"
@@ -70,7 +60,7 @@ class CloneActivity : AppCompatActivity() {
 
             btnClone.isEnabled = false
             progressBar.visibility = View.VISIBLE
-            tvStatus.text = "⏳ Cloning from $url…"
+            tvStatus.text = if (pat != null) "⏳ Authenticating and cloning from $url…" else "⏳ Cloning from $url…"
 
             lifecycleScope.launch {
                 try {
@@ -78,9 +68,9 @@ class CloneActivity : AppCompatActivity() {
                         remoteUrl = url,
                         repoName  = name,
                         pat       = pat
-                    ) { task, _ ->
+                    ) { task, pct ->
                         lifecycleScope.launch(Dispatchers.Main) {
-                            tvStatus.text = "⏳ $task"
+                            tvStatus.text = if (pct > 0) "⏳ $task ($pct%)" else "⏳ $task"
                         }
                     }
 
@@ -101,6 +91,9 @@ class CloneActivity : AppCompatActivity() {
                         progressBar.visibility = View.GONE
                         btnClone.isEnabled = true
                         tvStatus.text = "❌ Clone failed:\n${e.message}"
+                        if (pat == null && e.message?.contains("auth", true) == true) {
+                            tvStatus.text = "❌ Auth failed. Please login with GitHub in Settings/Inbox."
+                        }
                     }
                 }
             }

@@ -1,46 +1,63 @@
-<?xml version="1.0" encoding="utf-8"?>
-<com.google.android.material.card.MaterialCardView
+<LinearLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:layout_marginBottom="8dp"
-    app:cardCornerRadius="12dp"
-    app:cardElevation="2dp"
-    app:cardBackgroundColor="@color/surface">
+    android:orientation="horizontal"
+    android:paddingStart="8dp"
+    android:paddingEnd="12dp">
 
-    <LinearLayout
-        android:layout_width="match_parent"
+    <!-- Graph Sidebar - Outside the card for continuity -->
+    <com.anonymous.gitlaneapp.ui.view.VisualGraphView
+        android:id="@+id/graphView"
+        android:layout_width="60dp"
+        android:layout_height="match_parent"
+        android:layout_marginEnd="4dp" />
+
+    <!-- Commit Content Card -->
+    <com.google.android.material.card.MaterialCardView
+        android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:orientation="vertical"
-        android:padding="14dp">
+        android:layout_weight="1"
+        android:layout_marginTop="6dp"
+        android:layout_marginBottom="6dp"
+        app:cardCornerRadius="12dp"
+        app:cardElevation="2dp"
+        app:cardBackgroundColor="@color/surface">
 
-        <!-- Commit message -->
-        <TextView
-            android:id="@+id/tvCommitMsg"
-            android:layout_width="wrap_content"
+        <LinearLayout
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:textSize="15sp"
-            android:textStyle="bold"
-            android:textColor="@color/text_primary"
-            android:layout_marginBottom="4dp" />
+            android:orientation="vertical"
+            android:padding="12dp">
 
-        <!-- SHA badge -->
-        <TextView
-            android:id="@+id/tvCommitSha"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:textSize="12sp"
-            android:textColor="@color/accent"
-            android:fontFamily="monospace"
-            android:layout_marginBottom="2dp" />
+            <!-- Commit message -->
+            <TextView
+                android:id="@+id/tvCommitMsg"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textSize="14sp"
+                android:textStyle="bold"
+                android:textColor="@color/text_primary"
+                android:layout_marginBottom="2dp" />
 
-        <!-- Author · Date -->
-        <TextView
-            android:id="@+id/tvCommitMeta"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:textSize="12sp"
-            android:textColor="@color/text_secondary" />
-    </LinearLayout>
-</com.google.android.material.card.MaterialCardView>
+            <!-- SHA badge -->
+            <TextView
+                android:id="@+id/tvCommitSha"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textSize="11sp"
+                android:textColor="@color/accent"
+                android:fontFamily="monospace"
+                android:layout_marginBottom="2dp" />
+
+            <!-- Author · Date -->
+            <TextView
+                android:id="@+id/tvCommitMeta"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textSize="11sp"
+                android:textColor="@color/text_secondary" />
+        </LinearLayout>
+    </com.google.android.material.card.MaterialCardView>
+</LinearLayout>

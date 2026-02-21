@@ -47,10 +47,23 @@ class DashboardActivity : AppCompatActivity() {
         setupCloneButton()
         setupFetchGithubButton()
         setupSettingsButton()
+        setupInboxButton()
         setupScanFab()
         loadRepos()
 
         checkFirstRun()
+    }
+
+    private fun setupInboxButton() {
+        binding.btnInbox.setOnClickListener {
+            val creds = com.anonymous.gitlaneapp.CredentialsManager(this)
+            if (!creds.hasAnyToken()) {
+                Toast.makeText(this, "Set a GitHub token in Settings to view invitations", Toast.LENGTH_SHORT).show()
+                startActivity(Intent(this, SettingsActivity::class.java))
+                return@setOnClickListener
+            }
+            startActivity(Intent(this, InvitationInboxActivity::class.java))
+        }
     }
 
     private fun checkFirstRun() {
@@ -79,6 +92,10 @@ class DashboardActivity : AppCompatActivity() {
             // Start GitHub Repo listing activity
             val intent = Intent(this, GitHubRepoListActivity::class.java)
             refreshLauncher.launch(intent)
+        }
+
+        binding.btnSearchPublic.setOnClickListener {
+            startActivity(Intent(this, PublicRepoSearchActivity::class.java))
         }
     }
 

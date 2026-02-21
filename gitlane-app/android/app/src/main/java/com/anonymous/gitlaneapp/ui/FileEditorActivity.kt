@@ -54,6 +54,65 @@ class FileEditorActivity : AppCompatActivity() {
         binding.btnCancel.setOnClickListener {
             finish()
         }
+
+        binding.btnAcceptCurrent.setOnClickListener  { resolveConflicts("CURRENT") }
+        binding.btnAcceptIncoming.setOnClickListener { resolveConflicts("INCOMING") }
+        binding.btnAcceptBoth.setOnClickListener     { resolveConflicts("BOTH") }
+    }
+
+    private fun checkConflicts() {
+        val content = binding.etFileContent.text.toString()
+        val hasMarkers = content.contains("<<<<<<<") && content.contains("=======") && content.contains(">>>>>>>")
+        binding.llConflictActions.visibility = if (hasMarkers) View.VISIBLE else View.GONE
+    }
+
+    private fun resolveConflicts(type: String) {
+        val currentContent = binding.etFileContent.text.toString()
+        val resolved = resolveGitConflict(currentContent, type)
+        binding.etFileContent.setText(resolved)
+        binding.llConflictActions.visibility = View.GONE
+        Toast.makeText(this, "✅ Conflict resolved ($type)", Toast.LENGTH_SHORT).show()
+    }
+
+    private fun resolveGitConflict(content: String, type: String): String {
+        val lines = content.lines()
+        val result = mutableListOf<String>()
+        var i = 0
+        while (i < lines.size) {
+            val line = lines[i]
+            if (line.startsWith("<<<<<<<")) {
+                val current = mutableListOf<String>()
+                val incoming = mutableListOf<String>()
+                
+                i++
+                // Read current (HEAD)
+                while (i < lines.size && !lines[i].startsWith("=======")) {
+                    current.add(lines[i])
+                    i++
+                }
+                
+                i++
+                // Read incoming
+                while (i < lines.size && !lines[i].startsWith(">>>>>>>")) {
+                    incoming.add(lines[i])
+                    i++
+                }
+                
+                // Decide what to add
+                when (type) {
+                    "CURRENT"  -> result.addAll(current)
+                    "INCOMING" -> result.addAll(incoming)
+                    "BOTH"     -> {
+                        result.addAll(current)
+                        result.addAll(incoming)
+                    }
+                }
+            } else {
+                result.add(line)
+            }
+            i++
+        }
+        return result.joinToString("\n")
     }
 
     private fun loadFileContent() {
@@ -63,21 +122,18 @@ class FileEditorActivity : AppCompatActivity() {
                 val imageExtensions = listOf("jpg", "jpeg", "png", "gif", "bmp", "webp")
 
                 if (extension in imageExtensions) {
-                    // Show Image
+                    // ... (image logic) ...
                     binding.tilFileContent.visibility = View.GONE
                     binding.ivFileImage.visibility = View.VISIBLE
-                    binding.btnSave.visibility = View.GONE // Can't edit images yet
+                    binding.btnSave.visibility = View.GONE 
                     
                     val bitmap = withContext(Dispatchers.IO) {
                         android.graphics.BitmapFactory.decodeFile(fileToEdit.absolutePath)
                     }
                     if (bitmap != null) {
                         binding.ivFileImage.setImageBitmap(bitmap)
-                    } else {
-                        Toast.makeText(this@FileEditorActivity, "❌ Could not load image", Toast.LENGTH_SHORT).show()
                     }
                 } else {
-                    // Show Text
                     binding.tilFileContent.visibility = View.VISIBLE
                     binding.ivFileImage.visibility = View.GONE
                     binding.btnSave.visibility = View.VISIBLE
@@ -85,6 +141,8 @@ class FileEditorActivity : AppCompatActivity() {
                     val relativePath = fileToEdit.absolutePath.removePrefix(repoDir.absolutePath).removePrefix("/")
                     val content = withContext(Dispatchers.IO) { git.readFile(repoDir, relativePath) }
                     binding.etFileContent.setText(content)
+                    
+                    checkConflicts()
                 }
             } catch (e: Exception) {
                 Toast.makeText(this@FileEditorActivity, "❌ Error loading: ${e.message}", Toast.LENGTH_SHORT).show()

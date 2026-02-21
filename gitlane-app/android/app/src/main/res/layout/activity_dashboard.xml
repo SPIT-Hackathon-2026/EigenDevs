@@ -56,6 +56,16 @@
                 </LinearLayout>
 
                 <ImageButton
+                    android:id="@+id/btnInbox"
+                    android:layout_width="48dp"
+                    android:layout_height="48dp"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:contentDescription="Inbox"
+                    android:src="@android:drawable/ic_dialog_email"
+                    android:layout_marginEnd="8dp"
+                    app:tint="@color/accent" />
+
+                <ImageButton
                     android:id="@+id/btnSettings"
                     android:layout_width="48dp"
                     android:layout_height="48dp"
@@ -114,9 +124,18 @@
                 android:id="@+id/btnFetchGithub"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="🌐 Fetch GitHub Repos"
+                android:text="🌐 Fetch My Repos"
                 style="@style/Widget.Material3.Button.TextButton"
                 android:textColor="@color/text_primary"
+                android:textAllCaps="false" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnSearchPublic"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="🔍 Search GitHub"
+                style="@style/Widget.Material3.Button.TextButton"
+                android:textColor="@color/accent"
                 android:textAllCaps="false" />
         </LinearLayout>
     </com.google.android.material.card.MaterialCardView>

@@ -57,7 +57,7 @@
 
         <activity
             android:name=".ui.SettingsActivity"
-            android:label="Settings — Auth Tokens" />
+            android:label="Settings" />
 
         <activity
             android:name=".ui.CloneActivity"
@@ -71,6 +71,10 @@
             android:name=".ui.RemoteActivity"
             android:label="Remotes" />
 
+        <activity
+            android:name=".ui.TagActivity"
+            android:label="Tags" />
+
         <!-- File Editor — view/edit file content -->
         <activity
             android:name=".ui.FileEditorActivity"
@@ -80,6 +84,38 @@
         <activity
             android:name=".ui.GitHubRepoListActivity"
             android:label="Select GitHub Repository" />
+
+        <activity
+            android:name=".ui.ConflictResolutionActivity"
+            android:label="Resolve Merge Conflicts" />
+
+        <activity
+            android:name=".ui.MergeConflictActivity"
+            android:label="Three-Way Merge" />
+
+        <activity
+            android:name=".ui.ModernHistoryActivity"
+            android:label="Pro Git Graph" />
+
+        <activity
+            android:name=".ui.InvitationInboxActivity"
+            android:label="Collaboration Inbox" />
+
+        <activity
+            android:name=".ui.GitHubOAuthActivity"
+            android:exported="true"
+            android:label="GitHub Login">
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="gitlane" android:host="oauth" />
+            </intent-filter>
+        </activity>
+
+        <activity
+            android:name=".ui.PublicRepoSearchActivity"
+            android:label="GitHub Discovery" />
 
         <!-- ZXing Scanner -->
         <activity

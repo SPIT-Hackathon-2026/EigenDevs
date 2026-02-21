@@ -59,7 +59,20 @@
                         android:layout_height="wrap_content"
                         android:text="🌿 Branches"
                         style="@style/Widget.Material3.Button.OutlinedButton"
-                        android:layout_marginEnd="8dp" />
+                        android:padding="0dp"
+                        android:layout_marginEnd="4dp"
+                        android:textSize="12sp" />
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btnTags"
+                        android:layout_width="0dp"
+                        android:layout_weight="1"
+                        android:layout_height="wrap_content"
+                        android:text="🏷️ Tags"
+                        style="@style/Widget.Material3.Button.OutlinedButton"
+                        android:padding="0dp"
+                        android:layout_marginEnd="4dp"
+                        android:textSize="12sp" />
 
                     <com.google.android.material.button.MaterialButton
                         android:id="@+id/btnRemotes"
@@ -67,7 +80,9 @@
                         android:layout_weight="1"
                         android:layout_height="wrap_content"
                         android:text="🔁 Remotes"
-                        style="@style/Widget.Material3.Button.OutlinedButton" />
+                        style="@style/Widget.Material3.Button.OutlinedButton"
+                        android:padding="0dp"
+                        android:textSize="12sp" />
                 </LinearLayout>
 
                 <com.google.android.material.button.MaterialButton
@@ -232,6 +247,53 @@
         </com.google.android.material.card.MaterialCardView>
 
 
+        <!-- Merge Conflict Alert -->
+        <com.google.android.material.card.MaterialCardView
+            android:id="@+id/cardConflict"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="16dp"
+            android:visibility="gone"
+            app:cardCornerRadius="12dp"
+            app:cardElevation="2dp"
+            app:strokeColor="#FF5252"
+            app:strokeWidth="1.5dp"
+            app:cardBackgroundColor="#26FF5252">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="12dp">
+                
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="🚨 Merge Conflict Detected!"
+                    android:textSize="16sp"
+                    android:textStyle="bold"
+                    android:textColor="#FF5252"
+                    android:layout_marginBottom="4dp" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Some files have conflicting changes. Resolve them to continue."
+                    android:textSize="13sp"
+                    android:textColor="#FF8A80"
+                    android:layout_marginBottom="12dp" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnResolveConflict"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Resolve Conflicts"
+                    app:backgroundTint="#FF5252"
+                    android:textColor="@android:color/white"
+                    app:cornerRadius="8dp" />
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+
         <!-- Changes to Commit -->
         <LinearLayout
             android:id="@+id/llChangesContainer"
@@ -325,6 +387,17 @@
             android:layout_height="wrap_content"
             android:text="⬆️ Push to Remote (GitHub)"
             app:backgroundTint="@color/accent"
+            app:cornerRadius="10dp"
+            android:textColor="@android:color/white"
+            android:layout_marginBottom="12dp" />
+
+        <!-- Modern High-Fidelity Graph Button -->
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnModernHistory"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="📈 Pro Visual Graph"
+            app:backgroundTint="#8B5CF6"
             app:cornerRadius="10dp"
             android:textColor="@android:color/white"
             android:layout_marginBottom="12dp" />

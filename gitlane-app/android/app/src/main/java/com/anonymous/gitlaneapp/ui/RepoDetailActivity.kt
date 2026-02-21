@@ -154,6 +154,27 @@ class RepoDetailActivity : AppCompatActivity() {
             startActivity(intent)
         }
 
+        // Pro Visual Graph
+        binding.btnModernHistory.setOnClickListener {
+            val intent = Intent(this, ModernHistoryActivity::class.java).apply {
+                putExtra("extra_repo_path", repoDir.absolutePath)
+            }
+            startActivity(intent)
+        }
+
+        binding.btnHistory.setOnLongClickListener {
+            optimizeRepoStorage()
+            true
+        }
+
+        binding.btnResolveConflict.setOnClickListener {
+            // Launch conflict resolution activity
+            val intent = Intent(this, ConflictResolutionActivity::class.java).apply {
+                putExtra(ConflictResolutionActivity.EXTRA_REPO_PATH, repoDir.absolutePath)
+            }
+            editLauncher.launch(intent)
+        }
+
         // Share via QR
         binding.btnShareQr.setOnClickListener {
             val intent = Intent(this, QRShareActivity::class.java).apply {
@@ -167,6 +188,15 @@ class RepoDetailActivity : AppCompatActivity() {
             val intent = Intent(this, BranchActivity::class.java).apply {
                 putExtra(BranchActivity.EXTRA_REPO_PATH, repoDir.absolutePath)
                 putExtra(BranchActivity.EXTRA_REPO_NAME, repoDir.name)
+            }
+            startActivity(intent)
+        }
+
+        // Tags
+        binding.btnTags.setOnClickListener {
+            val intent = Intent(this, TagActivity::class.java).apply {
+                putExtra(TagActivity.EXTRA_REPO_PATH, repoDir.absolutePath)
+                putExtra(TagActivity.EXTRA_REPO_NAME, repoDir.name)
             }
             startActivity(intent)
         }
@@ -188,6 +218,18 @@ class RepoDetailActivity : AppCompatActivity() {
         // Add Collaborator
         binding.btnAddCollaborator.setOnClickListener {
             showAddCollaboratorDialog()
+        }
+    }
+
+    private fun optimizeRepoStorage() {
+        lifecycleScope.launch {
+            Toast.makeText(this@RepoDetailActivity, "⏳ Optimizing storage (Delta Compression)...", Toast.LENGTH_SHORT).show()
+            val success = git.optimizeStorage(repoDir)
+            if (success) {
+                Toast.makeText(this@RepoDetailActivity, "✅ Storage optimized! Objects packed.", Toast.LENGTH_LONG).show()
+            } else {
+                Toast.makeText(this@RepoDetailActivity, "❌ Optimization failed.", Toast.LENGTH_SHORT).show()
+            }
         }
     }
 
@@ -356,12 +398,23 @@ class RepoDetailActivity : AppCompatActivity() {
                 val token = creds.getPat("github.com") ?: return@launch
                 
                 val api = com.anonymous.gitlaneapp.GitHubApiManager(token)
-                val list = api.listCollaborators(fullName)
+                
+                // Try listing collaborators (requires push access)
+                val list = try {
+                    api.listCollaborators(fullName)
+                } catch (e: Exception) {
+                    if (e.message?.contains("403") == true) {
+                        // Fallback to contributors for public repos where we don't have push access
+                        api.listContributors(fullName)
+                    } else {
+                        throw e
+                    }
+                }
                 
                 binding.tvCollaboratorList.text = if (list.isEmpty()) {
-                    "No collaborators found"
+                    "No members or contributors found"
                 } else {
-                    "Current: " + list.joinToString(", ")
+                    "Team: " + list.joinToString(", ")
                 }
             } catch (e: Exception) {
                 binding.tvCollaboratorList.text = "Error fetching: ${e.message}"
@@ -370,6 +423,9 @@ class RepoDetailActivity : AppCompatActivity() {
     }
 
     private fun updateStatusUI(status: com.anonymous.gitlaneapp.GitStatus) {
+        // Show/Hide Merge Conflict Alert
+        binding.cardConflict.visibility = if (status.conflicting.isNotEmpty()) View.VISIBLE else View.GONE
+
         if (!status.hasChanges()) {
             binding.llChangesContainer.visibility = View.GONE
             return
@@ -384,7 +440,9 @@ class RepoDetailActivity : AppCompatActivity() {
 
         toDisplay.forEach { path ->
             val textView = android.widget.TextView(this).apply {
+                val isConflict = status.conflicting.contains(path)
                 val icon = when {
+                    isConflict -> "❗"
                     status.modified.contains(path) || status.added.contains(path) -> "📝"
                     status.untracked.contains(path) -> "🆕"
                     status.removed.contains(path) -> "🗑️"
@@ -393,7 +451,12 @@ class RepoDetailActivity : AppCompatActivity() {
                 text = "$icon $path"
                 textSize = 13f
                 setPadding(0, 4, 0, 4)
-                setTextColor(resources.getColor(R.color.text_primary, theme))
+                if (isConflict) {
+                    setTextColor(android.graphics.Color.parseColor("#FF5252"))
+                    setTypeface(null, android.graphics.Typeface.BOLD)
+                } else {
+                    setTextColor(resources.getColor(R.color.text_primary, theme))
+                }
             }
             binding.llChangesList.addView(textView)
         }
