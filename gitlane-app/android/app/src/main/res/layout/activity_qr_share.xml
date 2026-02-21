@@ -73,7 +73,29 @@
             android:fontFamily="monospace"
             android:gravity="center"
             android:visibility="gone"
-            android:layout_marginBottom="8dp"/>
+            android:layout_marginBottom="12dp"/>
+
+        <!-- Manual IP Override -->
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnEditIp"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="✏️ Edit IP/URL"
+            style="@style/Widget.Material3.Button.TextButton"
+            android:textColor="@color/accent"
+            android:visibility="gone" />
+
+        <TextView
+            android:id="@+id/tvEmulatorHint"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="💡 Tip: Since you're using an emulator, enter your PC's IP (e.g. 192.168.1.x) to let your physical phone connect."
+            android:textSize="11sp"
+            android:textColor="@color/text_secondary"
+            android:gravity="center"
+            android:paddingHorizontal="12dp"
+            android:visibility="gone"
+            android:layout_marginTop="4dp" />
 
         <!-- Keep screen on hint -->
         <TextView

@@ -61,32 +61,55 @@ class QRShareActivity : AppCompatActivity() {
                 val bundleFile = File(cacheDir, "$repoName.bundle")
                 BundleManager().createBundle(repoDir, bundleFile)
 
-                // 2. Get local IP
-                val ip = RepoShareServer.getLocalIp()
-                if (ip == null) {
-                    withContext(Dispatchers.Main) {
-                        tvStatus.text = "❌ No WiFi/hotspot detected.\nConnect to a network and retry."
-                    }
-                    return@launch
-                }
+                // 2. Get initial IP
+                var currentIp = RepoShareServer.getLocalIp() ?: "127.0.0.1"
 
                 // 3. Start the server
                 val srv = RepoShareServer(bundleFile, repoName, RepoShareServer.PORT)
                 srv.start()
                 server = srv
 
-                // 4. Build the URL that the receiver will hit
-                val url = "gitlane://$ip:${RepoShareServer.PORT}/$repoName"
-
-                // 5. Generate QR bitmap
-                val qrBitmap = generateQR(url, 600)
-
-                withContext(Dispatchers.Main) {
+                // UI setup function
+                fun updateUI(ip: String) {
+                    val url = "gitlane://$ip:${RepoShareServer.PORT}/$repoName"
+                    val qrBitmap = generateQR(url, 600)
+                    
                     tvStatus.text = "✅ Ready to share!\nMake sure both devices are on the same WiFi / hotspot."
                     tvUrl.text    = url
                     tvUrl.visibility = View.VISIBLE
                     ivQr.setImageBitmap(qrBitmap)
                     ivQr.visibility = View.VISIBLE
+
+                    // Show emulator specific stuff
+                    val isEmul = isEmulator()
+                    findViewById<View>(R.id.btnEditIp).visibility = View.VISIBLE
+                    if (isEmul) {
+                        findViewById<View>(R.id.tvEmulatorHint).visibility = View.VISIBLE
+                        if (ip.startsWith("10.0.2.")) {
+                            tvStatus.text = "⚠️ Emulator detected!\n'10.0.2.x' is only visible to your PC. Tap 'Edit IP' and enter your PC's WiFi IP so your phone can scan it."
+                        }
+                    }
+                }
+
+                withContext(Dispatchers.Main) {
+                    updateUI(currentIp)
+                    
+                    findViewById<View>(R.id.btnEditIp).setOnClickListener {
+                        val input = android.widget.EditText(this@QRShareActivity).apply {
+                            setText(currentIp)
+                            setHint("Enter IP (e.g. 192.168.1.10)")
+                        }
+                        android.app.AlertDialog.Builder(this@QRShareActivity)
+                            .setTitle("Set Sender IP")
+                            .setMessage("Enter the IP address that the receiver should use to connect to this device.")
+                            .setView(input)
+                            .setPositiveButton("Apply") { _, _ ->
+                                currentIp = input.text.toString().trim()
+                                updateUI(currentIp)
+                            }
+                            .setNegativeButton("Cancel", null)
+                            .show()
+                    }
                 }
 
             } catch (e: Exception) {
@@ -95,6 +118,14 @@ class QRShareActivity : AppCompatActivity() {
                 }
             }
         }
+    }
+
+    private fun isEmulator(): Boolean {
+        val build = android.os.Build.FINGERPRINT
+        return build.contains("generic") || build.contains("unknown") || 
+               android.os.Build.MODEL.contains("google_sdk") || 
+               android.os.Build.MODEL.contains("Emulator") || 
+               android.os.Build.MODEL.contains("Android SDK built for x86")
     }
 
     override fun onSupportNavigateUp(): Boolean {

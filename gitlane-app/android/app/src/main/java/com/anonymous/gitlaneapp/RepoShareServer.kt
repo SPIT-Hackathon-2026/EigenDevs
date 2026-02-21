@@ -42,14 +42,37 @@ class RepoShareServer(
 
         /**
          * Returns the device's current local IPv4 address (for QR encoding).
-         * Works on WiFi or hotspot; returns null if no network interface found.
+         * Prioritizes WiFi (wlan) and Hotspot (ap) interfaces.
          */
         fun getLocalIp(): String? {
             return try {
-                NetworkInterface.getNetworkInterfaces()
-                    ?.asSequence()
-                    ?.flatMap { it.inetAddresses.asSequence() }
-                    ?.firstOrNull { !it.isLoopbackAddress && it is Inet4Address }
+                val interfaces = NetworkInterface.getNetworkInterfaces().toList()
+                
+                // 1. Priority: Look for explicitly named hotspot interfaces (ap0, softap)
+                // In Android, hotspot IP is almost always 192.168.43.1
+                val hotspotAddr = interfaces.asSequence()
+                    .filter { it.name.contains("ap") || it.name.contains("softap") }
+                    .flatMap { it.inetAddresses.asSequence() }
+                    .firstOrNull { it is Inet4Address && !it.isLoopbackAddress }
+                    ?.hostAddress ?: "192.168.43.1" // Fallback to standard Android hotspot IP
+
+                // Check if we are actually in hotspot mode (interface contains 43.1)
+                val activeHotspot = interfaces.flatMap { it.inetAddresses.asSequence() }
+                    .firstOrNull { it.hostAddress == "192.168.43.1" }
+                if (activeHotspot != null) return "192.168.43.1"
+
+                // 2. WiFi Interface (usually wlan0) starting with 192.168
+                val wifiAddr = interfaces.asSequence()
+                    .filter { it.name.contains("wlan") }
+                    .flatMap { it.inetAddresses.asSequence() }
+                    .firstOrNull { it is Inet4Address && !it.isLoopbackAddress && it.hostAddress.startsWith("192.168.") }
+                
+                if (wifiAddr != null) return wifiAddr.hostAddress
+
+                // 3. Generic fallback
+                interfaces.asSequence()
+                    .flatMap { it.inetAddresses.asSequence() }
+                    .firstOrNull { !it.isLoopbackAddress && it is Inet4Address }
                     ?.hostAddress
             } catch (e: Exception) {
                 null
