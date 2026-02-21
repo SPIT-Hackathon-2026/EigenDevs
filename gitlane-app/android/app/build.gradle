@@ -23,6 +23,7 @@ android {
     }
 
     compileOptions {
+        coreLibraryDesugaringEnabled true
         sourceCompatibility JavaVersion.VERSION_17
         targetCompatibility JavaVersion.VERSION_17
     }
@@ -35,7 +36,7 @@ android {
         viewBinding true
     }
 
-    // JGit uses some classes that need this packaging option
+    // JGit + NanoHTTPD packaging options
     packagingOptions {
         resources {
             excludes += [
@@ -43,13 +44,16 @@ android {
                 'META-INF/LICENSE.txt',
                 'META-INF/NOTICE',
                 'META-INF/NOTICE.txt',
-                'META-INF/*.kotlin_module'
+                'META-INF/*.kotlin_module',
+                'META-INF/DEPENDENCIES'
             ]
         }
     }
 }
 
 dependencies {
+    coreLibraryDesugaring 'com.android.tools:desugar_jdk_libs:2.0.4'
+
     // AndroidX core
     implementation 'androidx.core:core-ktx:1.13.1'
     implementation 'androidx.appcompat:appcompat:1.7.0'
@@ -60,13 +64,27 @@ dependencies {
     // Material Design 3
     implementation 'com.google.android.material:material:1.12.0'
 
-    // JGit — pure Java git implementation (works on Android)
-    implementation('org.eclipse.jgit:org.eclipse.jgit:6.10.0.202406032230-r') {
-        // Exclude slf4j binding — causes duplicate class conflicts on Android
+    // JGit — 5.13.x is the last version supporting Java 8 (best for Android compatibility)
+    implementation('org.eclipse.jgit:org.eclipse.jgit:5.13.3.202401111512-r') {
         exclude group: 'org.slf4j', module: 'slf4j-simple'
     }
 
     // Kotlin coroutines (for background git ops)
     implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-android:1.8.1'
     implementation 'androidx.lifecycle:lifecycle-runtime-ktx:2.8.4'
+
+    // Encrypted PAT storage
+    implementation 'androidx.security:security-crypto:1.1.0-alpha06'
+
+    // CoordinatorLayout (Dashboard FAB)
+    implementation 'androidx.coordinatorlayout:coordinatorlayout:1.2.0'
+
+    // QR Code generation (ZXing core — no camera, pure bitmap)
+    implementation 'com.google.zxing:core:3.5.3'
+
+    // QR Code scanning (camera + decoder, bundled activity)
+    implementation('com.journeyapps:zxing-android-embedded:4.3.0') { transitive = false }
+
+    // Local HTTP server — serves the git bundle to the receiving device
+    implementation 'org.nanohttpd:nanohttpd:2.3.1'
 }

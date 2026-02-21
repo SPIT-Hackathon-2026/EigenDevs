@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:padding="16dp">
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Base Branch (to compare against)"
+        android:textSize="12sp"
+        android:textColor="@color/text_secondary" />
+    <Spinner
+        android:id="@+id/spBase"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="16dp" />
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Target Branch (branch to check)"
+        android:textSize="12sp"
+        android:textColor="@color/text_secondary" />
+    <Spinner
+        android:id="@+id/spTarget"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="24dp" />
+
+    <TextView
+        android:id="@+id/tvCompareResult"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Select branches to compare."
+        android:textSize="14sp"
+        android:textStyle="italic"
+        android:textColor="@color/accent"
+        android:gravity="center" />
+</LinearLayout>

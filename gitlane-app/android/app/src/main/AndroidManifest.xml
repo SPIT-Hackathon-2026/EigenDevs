@@ -1,5 +1,16 @@
 <?xml version="1.0" encoding="utf-8"?>
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+
+    <!-- Camera for QR scanning -->
+    <uses-permission android:name="android.permission.CAMERA" />
+    <!-- Network state to read local IP for QR generation -->
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
+    <!-- Local HTTP server needs this on Android 9+ -->
+    <uses-permission android:name="android.permission.INTERNET" />
+
+    <uses-feature android:name="android.hardware.camera" android:required="false" />
 
     <application
         android:name=".GitLaneApp"
@@ -8,9 +19,10 @@
         android:label="@string/app_name"
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
+        android:usesCleartextTraffic="true"
         android:theme="@style/Theme.GitLane">
 
-        <!-- Dashboard — repo list -->
+        <!-- Dashboard — repo list + scan button -->
         <activity
             android:name=".ui.DashboardActivity"
             android:exported="true"
@@ -21,7 +33,7 @@
             </intent-filter>
         </activity>
 
-        <!-- Repo detail — files, create file, commit -->
+        <!-- Repo detail — files, create file, commit, share -->
         <activity
             android:name=".ui.RepoDetailActivity"
             android:exported="false"
@@ -31,6 +43,40 @@
         <activity
             android:name=".ui.CommitHistoryActivity"
             android:exported="false" />
+
+        <!-- QR Share — shows bundle QR for a repo -->
+        <activity
+            android:name=".ui.QRShareActivity"
+            android:exported="false" />
+
+        <!-- QR Scan — camera scan + repo import -->
+        <activity
+            android:name=".ui.QRScanActivity"
+            android:screenOrientation="portrait"
+            android:label="Scan Repository QR" />
+
+        <activity
+            android:name=".ui.SettingsActivity"
+            android:label="Settings — Auth Tokens" />
+
+        <activity
+            android:name=".ui.CloneActivity"
+            android:label="Clone Repository" />
+
+        <activity
+            android:name=".ui.BranchActivity"
+            android:label="Branches" />
+
+        <activity
+            android:name=".ui.RemoteActivity"
+            android:label="Remotes" />
+
+        <!-- ZXing Scanner -->
+        <activity
+            android:name="com.journeyapps.barcodescanner.CaptureActivity"
+            android:screenOrientation="fullSensor"
+            android:exported="false"
+            tools:replace="screenOrientation" />
 
     </application>
 

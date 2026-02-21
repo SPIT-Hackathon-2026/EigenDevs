@@ -1,6 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<androidx.coordinatorlayout.widget.CoordinatorLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/bg_primary">
+
+<LinearLayout
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
@@ -21,23 +27,43 @@
             android:orientation="vertical"
             android:padding="20dp">
 
-            <TextView
-                android:layout_width="wrap_content"
+            <LinearLayout
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="🚀 GitLane"
-                android:textSize="28sp"
-                android:textStyle="bold"
-                android:textColor="@color/text_primary"
-                android:layout_gravity="center_horizontal" />
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:layout_marginBottom="16dp">
 
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="Offline Git Client"
-                android:textSize="14sp"
-                android:textColor="@color/text_secondary"
-                android:layout_gravity="center_horizontal"
-                android:layout_marginBottom="16dp" />
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_weight="1"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical">
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="🚀 GitLane"
+                        android:textSize="28sp"
+                        android:textStyle="bold"
+                        android:textColor="@color/text_primary" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Offline Git Client"
+                        android:textSize="14sp"
+                        android:textColor="@color/text_secondary" />
+                </LinearLayout>
+
+                <ImageButton
+                    android:id="@+id/btnSettings"
+                    android:layout_width="48dp"
+                    android:layout_height="48dp"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:contentDescription="Settings"
+                    android:src="@android:drawable/ic_menu_preferences"
+                    app:tint="@color/text_secondary" />
+            </LinearLayout>
 
             <com.google.android.material.textfield.TextInputLayout
                 android:layout_width="match_parent"
@@ -56,14 +82,32 @@
                     android:textColor="@color/text_primary" />
             </com.google.android.material.textfield.TextInputLayout>
 
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/btnCreateRepo"
+            <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="Create Repo"
-                android:textSize="16sp"
-                app:backgroundTint="@color/accent"
-                app:cornerRadius="10dp" />
+                android:orientation="horizontal">
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnCreateRepo"
+                    android:layout_width="0dp"
+                    android:layout_weight="1"
+                    android:layout_height="wrap_content"
+                    android:text="Create"
+                    android:layout_marginEnd="8dp"
+                    app:backgroundTint="@color/accent"
+                    app:cornerRadius="10dp" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnGoToClone"
+                    android:layout_width="0dp"
+                    android:layout_weight="1"
+                    android:layout_height="wrap_content"
+                    android:text="Clone"
+                    style="@style/Widget.Material3.Button.OutlinedButton"
+                    app:strokeColor="@color/accent"
+                    android:textColor="@color/accent"
+                    app:cornerRadius="10dp" />
+            </LinearLayout>
         </LinearLayout>
     </com.google.android.material.card.MaterialCardView>
 
@@ -89,3 +133,17 @@
         android:clipToPadding="false" />
 
 </LinearLayout>
+
+    <!-- 📷 Scan QR FAB — bottom right -->
+    <com.google.android.material.floatingactionbutton.FloatingActionButton
+        android:id="@+id/fabScanQr"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="bottom|end"
+        android:layout_margin="20dp"
+        android:contentDescription="Scan QR to import repo"
+        app:backgroundTint="@color/accent"
+        app:tint="@android:color/white"
+        app:srcCompat="@android:drawable/ic_menu_camera" />
+
+</androidx.coordinatorlayout.widget.CoordinatorLayout>

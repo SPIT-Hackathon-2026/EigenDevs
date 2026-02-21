@@ -9,7 +9,8 @@ import com.anonymous.gitlaneapp.databinding.ItemRepoBinding
 import java.io.File
 
 class RepoAdapter(
-    private val onClick: (File) -> Unit
+    private val onClick: (File) -> Unit,
+    private val onMore:  (File, android.view.View) -> Unit
 ) : ListAdapter<File, RepoAdapter.RepoViewHolder>(RepoDiffCallback()) {
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): RepoViewHolder {
@@ -28,6 +29,7 @@ class RepoAdapter(
             binding.tvRepoName.text = repo.name
             binding.tvRepoPath.text = repo.absolutePath
             binding.root.setOnClickListener { onClick(repo) }
+            binding.btnMoreRepo.setOnClickListener { onMore(repo, it) }
         }
     }
 

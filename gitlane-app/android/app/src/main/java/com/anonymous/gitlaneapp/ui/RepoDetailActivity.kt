@@ -88,6 +88,32 @@ class RepoDetailActivity : AppCompatActivity() {
             }
             startActivity(intent)
         }
+
+        // Share via QR
+        binding.btnShareQr.setOnClickListener {
+            val intent = Intent(this, QRShareActivity::class.java).apply {
+                putExtra("REPO_NAME", repoDir.name)
+            }
+            startActivity(intent)
+        }
+
+        // Branches
+        binding.btnBranches.setOnClickListener {
+            val intent = Intent(this, BranchActivity::class.java).apply {
+                putExtra(BranchActivity.EXTRA_REPO_PATH, repoDir.absolutePath)
+                putExtra(BranchActivity.EXTRA_REPO_NAME, repoDir.name)
+            }
+            startActivity(intent)
+        }
+
+        // Remotes
+        binding.btnRemotes.setOnClickListener {
+            val intent = Intent(this, RemoteActivity::class.java).apply {
+                putExtra(RemoteActivity.EXTRA_REPO_PATH, repoDir.absolutePath)
+                putExtra(RemoteActivity.EXTRA_REPO_NAME, repoDir.name)
+            }
+            startActivity(intent)
+        }
     }
 
     private fun loadRepoInfo() {

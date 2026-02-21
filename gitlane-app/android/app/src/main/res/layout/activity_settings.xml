@@ -1,0 +1,103 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/bg_primary">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="16dp">
+
+        <!-- PAT info card -->
+        <com.google.android.material.card.MaterialCardView
+            xmlns:app="http://schemas.android.com/apk/res-auto"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="16dp"
+            app:cardCornerRadius="12dp"
+            app:cardBackgroundColor="@color/surface">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="16dp">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="🔑 Personal Access Tokens"
+                    android:textSize="16sp"
+                    android:textStyle="bold"
+                    android:textColor="@color/text_primary"
+                    android:layout_marginBottom="4dp" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Tokens are stored encrypted on your device. They are used for clone, push, and pull operations on private repositories."
+                    android:textSize="12sp"
+                    android:textColor="@color/text_secondary" />
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+
+        <!-- Saved tokens list -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Saved Tokens"
+            android:textSize="14sp"
+            android:textStyle="bold"
+            android:textColor="@color/text_primary"
+            android:layout_marginBottom="8dp" />
+
+        <LinearLayout
+            android:id="@+id/llTokenList"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:layout_marginBottom="20dp" />
+
+        <!-- Add tokens -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Add Token"
+            android:textSize="14sp"
+            android:textStyle="bold"
+            android:textColor="@color/text_primary"
+            android:layout_marginBottom="8dp" />
+
+        <Button
+            android:id="@+id/btnAddGithub"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="＋ GitHub Token"
+            android:layout_marginBottom="8dp" />
+
+        <Button
+            android:id="@+id/btnAddGitlab"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="＋ GitLab Token"
+            android:layout_marginBottom="8dp" />
+
+        <Button
+            android:id="@+id/btnAddBitbucket"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="＋ Bitbucket Token"
+            android:layout_marginBottom="8dp" />
+
+        <Button
+            android:id="@+id/btnAddCustom"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="＋ Custom Server Token"
+            style="@style/Widget.Material3.Button.OutlinedButton"
+            android:layout_marginBottom="24dp" />
+
+    </LinearLayout>
+</ScrollView>
