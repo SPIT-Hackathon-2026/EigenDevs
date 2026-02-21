@@ -124,7 +124,8 @@ class QRShareActivity : AppCompatActivity() {
 
             } catch (e: Exception) {
                 withContext(Dispatchers.Main) {
-                    tvStatus.text = "❌ Share failed: ${e.message}"
+                    val detailedError = "${e.javaClass.simpleName}: ${e.message}"
+                    tvStatus.text = "❌ Share failed:\n$detailedError"
                 }
             }
         }

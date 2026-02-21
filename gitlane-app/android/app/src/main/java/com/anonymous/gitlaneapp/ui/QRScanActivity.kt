@@ -90,7 +90,11 @@ class QRScanActivity : AppCompatActivity() {
                 // 1. Download the bundle
                 val bundleFile = File(cacheDir, "$repoName.bundle")
                 withContext(Dispatchers.IO) {
-                    URL(bundleUrl).openStream().use { input ->
+                    val connection = URL(bundleUrl).openConnection()
+                    connection.connectTimeout = 10000 // 10 seconds
+                    connection.readTimeout = 10000    // 10 seconds
+                    
+                    connection.getInputStream().use { input ->
                         FileOutputStream(bundleFile).use { output ->
                             input.copyTo(output)
                         }
@@ -129,7 +133,8 @@ class QRScanActivity : AppCompatActivity() {
 
             } catch (e: Exception) {
                 withContext(Dispatchers.Main) {
-                    tvStatus.text = "❌ Import failed:\n${e.message}\n\nMake sure both devices are on the same WiFi/hotspot."
+                    val detailedError = "${e.javaClass.simpleName}: ${e.message ?: "No detail"}"
+                    tvStatus.text = "❌ Import failed:\n$detailedError\n\nVerify: IP address, Port forwarding, and Private Network profile."
                 }
             }
         }
