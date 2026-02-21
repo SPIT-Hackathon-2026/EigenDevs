@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- ── App palette ── -->
+    <!-- Background -->
+    <color name="bg_primary">#0F172A</color>
+    <!-- Card / surface -->
+    <color name="surface">#1E293B</color>
+    <!-- Primary accent — blue -->
+    <color name="accent">#3B82F6</color>
+    <!-- On-accent text (white) -->
+    <color name="on_accent">#FFFFFF</color>
+    <!-- Green accent for git status -->
+    <color name="accent_green">#22C55E</color>
+    <!-- Text -->
+    <color name="text_primary">#F1F5F9</color>
+    <color name="text_secondary">#94A3B8</color>
+    <!-- Status bar -->
+    <color name="status_bar">#0F172A</color>
+
+    <!-- ── Required by AppCompat / Material theme merging ── -->
+    <!-- These MUST exist as @color/* resources, not just theme attributes,
+         because AppCompat styles reference them directly by name. -->
+    <color name="colorPrimary">#3B82F6</color>
+    <color name="colorPrimaryDark">#1D4ED8</color>
+    <color name="colorAccent">#22C55E</color>
+    <color name="colorPrimaryVariant">#2563EB</color>
+    <color name="colorSecondary">#22C55E</color>
+    <color name="colorSecondaryVariant">#16A34A</color>
+    <color name="colorOnPrimary">#FFFFFF</color>
+    <color name="colorOnSecondary">#FFFFFF</color>
+    <color name="colorBackground">#0F172A</color>
+    <color name="colorOnBackground">#F1F5F9</color>
+    <color name="colorSurface">#1E293B</color>
+    <color name="colorOnSurface">#F1F5F9</color>
+    <color name="colorError">#EF4444</color>
+    <color name="colorOnError">#FFFFFF</color>
+</resources>
