@@ -14,6 +14,7 @@ import org.eclipse.jgit.storage.file.FileRepositoryBuilder
 import java.io.File
 import java.text.SimpleDateFormat
 import java.util.*
+import java.util.concurrent.ConcurrentLinkedQueue
 
 /**
  * Repository for handling Git Rebase operations using JGit.
@@ -126,45 +127,56 @@ class RebaseRepository(private val context: Context) {
                 rebase.setUpstream(upstreamId)
                 rebase.setOperation(RebaseCommand.Operation.BEGIN)
 
+                val messageQueue: Queue<RebaseStep> = ConcurrentLinkedQueue()
+
                 rebase.runInteractively(object : RebaseCommand.InteractiveHandler {
                     override fun prepareSteps(steps: MutableList<RebaseTodoLine>) {
-                        logOperation(repoDir, "JGit prepareSteps called with ${steps.size} original steps")
+                        logOperation(repoDir, "JGit prepareSteps: reordering ${steps.size} steps")
+                        
+                        // Create a lookup for JGit's original lines
+                        val jgitMap = steps.associateBy { it.commit?.name() ?: "unknown" }
+                        
+                        // Rebuild the steps list according to the user's PLAN
                         val modified = mutableListOf<RebaseTodoLine>()
+                        messageQueue.clear()
 
-                        steps.forEach { line ->
-                            val commitId = line.commit ?: return@forEach
-                            val fullSha = commitId.name() // AbbreviatedObjectId.name() returns the abbreviated string
-                            
-                            // Find in our plan. JGit's AbbreviatedObjectId.name() returns the abbreviated string.
-                            // We need to match it against our full SHAs in planMap.
-                            val matchingSha = planMap.keys.find { it.startsWith(fullSha) }
-                            val plannedStep = plannedStepFor(fullSha, planMap)
+                        plan.forEach { p ->
+                            // Find the corresponding JGit line (handling abbreviation)
+                            val jgitLine = jgitMap.entries.firstOrNull { it.key.startsWith(p.sha.take(7)) }?.value
+                                ?: return@forEach
 
-                            if (plannedStep?.action == RebaseAction.DROP) {
-                                logOperation(repoDir, "MATCHED: DROP ${fullSha.take(8)}")
+                            if (p.action == RebaseAction.DROP) {
+                                logOperation(repoDir, "Action: DROP ${p.sha.take(7)}")
                                 return@forEach
                             }
 
-                            val action = when (plannedStep?.action) {
+                            val action = when (p.action) {
                                 RebaseAction.REWORD -> RebaseTodoLine.Action.REWORD
                                 RebaseAction.EDIT   -> RebaseTodoLine.Action.EDIT
                                 RebaseAction.SQUASH -> RebaseTodoLine.Action.SQUASH
                                 RebaseAction.FIXUP  -> RebaseTodoLine.Action.FIXUP
                                 else                -> RebaseTodoLine.Action.PICK
                             }
+
+                            logOperation(repoDir, "Action: $action ${p.sha.take(7)}")
+                            modified.add(RebaseTodoLine(action, jgitLine.commit, jgitLine.shortMessage))
                             
-                            logOperation(repoDir, "MATCHED: ${action} ${fullSha.take(8)}")
-                            modified.add(RebaseTodoLine(action, commitId, line.shortMessage ?: ""))
+                            // If this action requires a message change, queue it for modifyCommitMessage
+                            if (p.action == RebaseAction.REWORD || p.action == RebaseAction.SQUASH) {
+                                messageQueue.add(p)
+                            }
                         }
 
                         steps.clear()
                         steps.addAll(modified)
-                        logOperation(repoDir, "Applied plan: ${steps.size} steps remaining")
                     }
 
                     override fun modifyCommitMessage(oldMessage: String?): String? {
-                        logOperation(repoDir, "modifyCommitMessage called for: ${oldMessage?.take(20)}...")
-                        return oldMessage
+                        val plannedStep = messageQueue.poll()
+                        logOperation(repoDir, "Modifying message for ${plannedStep?.sha?.take(7) ?: "unknown"}")
+                        
+                        // If user provided a new message in the UI, use it. Otherwise keep old.
+                        return plannedStep?.newMessage ?: oldMessage
                     }
                 })
 

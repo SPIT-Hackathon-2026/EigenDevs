@@ -20,6 +20,7 @@ object LocalIntentClassifier {
         data class CheckoutBranch(val name: String) : LocalIntent()
         data class DeleteBranch(val name: String) : LocalIntent()
         data class MergeBranch(val source: String) : LocalIntent()
+        data class Rebase(val upstream: String) : LocalIntent()
 
         data class SearchCommits(val query: String) : LocalIntent()
         data class StageAndCommit(val message: String) : LocalIntent()
@@ -70,6 +71,13 @@ object LocalIntentClassifier {
             val name = m.groupValues[1].trim()
             if (name.isNotBlank() && name !in listOf("branch", "into", "with")) return LocalIntent.MergeBranch(name)
         }
+
+        // Rebase
+        Regex("(?:rebase|interactive rebase)(?: onto| with)? [\"']?([a-zA-Z0-9/_\\-]+)[\"']?").find(q)?.let { m ->
+            val name = m.groupValues[1].trim()
+            if (name.isNotBlank() && name !in listOf("branch", "onto", "with")) return LocalIntent.Rebase(name)
+        }
+        if (q.contains("rebase")) return LocalIntent.Rebase("main")
 
         // 2. KEYWORD-BASED ACTIONS
         

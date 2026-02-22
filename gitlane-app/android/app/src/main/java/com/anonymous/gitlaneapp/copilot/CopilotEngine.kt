@@ -361,6 +361,11 @@ class CopilotEngine(private val context: Context) {
                 }
             }
 
+            is LocalIntentClassifier.LocalIntent.Rebase -> {
+                val d = dir ?: return CopilotResult.NeedInput("Which repo?", "rebase", emptyMap())
+                CopilotResult.ActionDone("__REBASE__:${d.absolutePath}|${intent.upstream}", true)
+            }
+
             // ── AI-required (still needs Groq) — return null to fall through ─
 
             is LocalIntentClassifier.LocalIntent.ExplainLatestCommit,
@@ -405,6 +410,7 @@ Always respond with ONLY a JSON object. No markdown wrapper, no explanation outs
 - "checkout_branch"   → params: { "repo": "repoName", "branch": "branchName" }
 - "delete_branch"     → params: { "repo": "repoName", "branch": "branchName" }
 - "merge_branch"      → params: { "repo": "repoName", "source": "featureBranch" }
+- "rebase"            → params: { "repo": "repoName", "upstream": "branchName" }
 
 ### Commit Actions
 - "list_commits"      → params: { "repo": "repoName", "query": "search text", "limit": 20 }
@@ -805,6 +811,13 @@ $repoContext
                 val dir = repoDir
                     ?: return CopilotResult.NeedInput("Which repo?", action, emptyMap())
                 CopilotResult.ActionDone("__OPEN_REPO__:${dir.absolutePath}", true)
+            }
+
+            // ── Rebase ──────────────────────────────────────────────────────
+            "rebase" -> {
+                val dir = repoDir ?: return CopilotResult.NeedInput("Which repo?", action, emptyMap())
+                val upstream = params?.optString("upstream") ?: "main"
+                CopilotResult.ActionDone("__REBASE__:${dir.absolutePath}|$upstream", true)
             }
 
             else -> CopilotResult.Text(reply)

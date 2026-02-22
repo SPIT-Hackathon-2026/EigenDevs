@@ -5,13 +5,24 @@ import com.google.gson.annotations.SerializedName
 /**
  * Supported actions for a single commit during an interactive rebase.
  */
-enum class RebaseAction {
-    @SerializedName("PICK") PICK,
-    @SerializedName("REWORD") REWORD,
-    @SerializedName("EDIT") EDIT,
-    @SerializedName("SQUASH") SQUASH,
-    @SerializedName("FIXUP") FIXUP,
-    @SerializedName("DROP") DROP
+enum class RebaseAction(val description: String, val helper: String) {
+    @SerializedName("PICK") 
+    PICK("Keep", "Use the commit as-is."),
+    
+    @SerializedName("REWORD") 
+    REWORD("Reword", "Use commit, but edit the commit message."),
+    
+    @SerializedName("EDIT") 
+    EDIT("Edit", "Stop for amending (not yet fully supported in UI)."),
+    
+    @SerializedName("SQUASH") 
+    SQUASH("Squash", "Meld into previous commit and combine messages."),
+    
+    @SerializedName("FIXUP") 
+    FIXUP("Fixup", "Meld into previous commit, discarding this message."),
+    
+    @SerializedName("DROP") 
+    DROP("Drop", "Remove this commit entirely.")
 }
 
 /**
