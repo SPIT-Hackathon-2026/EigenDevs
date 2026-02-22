@@ -1,0 +1,103 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:background="#0A0F1E"
+    android:paddingHorizontal="20dp"
+    android:paddingTop="20dp"
+    android:paddingBottom="16dp">
+
+    <!-- Header -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:layout_marginBottom="18dp">
+
+        <TextView
+            android:layout_width="0dp"
+            android:layout_weight="1"
+            android:layout_height="wrap_content"
+            android:text="Stage All &amp; Commit"
+            android:textSize="16sp"
+            android:textStyle="bold"
+            android:textColor="#E2E8F0"/>
+
+        <ImageButton
+            android:id="@+id/btnCommitDialogClose"
+            android:layout_width="28dp"
+            android:layout_height="28dp"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:src="@android:drawable/ic_menu_close_clear_cancel"
+            app:tint="#475569"
+            android:contentDescription="Close"/>
+    </LinearLayout>
+
+    <!-- Summary of changed files -->
+    <TextView
+        android:id="@+id/tvCommitChangeSummary"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text=""
+        android:textSize="11sp"
+        android:textColor="#64748B"
+        android:layout_marginBottom="12dp"
+        android:lineSpacingExtra="3dp"/>
+
+    <!-- Commit message -->
+    <com.google.android.material.textfield.TextInputLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:hint="Commit message"
+        style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
+        android:layout_marginBottom="18dp">
+
+        <com.google.android.material.textfield.TextInputEditText
+            android:id="@+id/etCommitDialogMsg"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:singleLine="true"
+            android:textColor="#E2E8F0"/>
+    </com.google.android.material.textfield.TextInputLayout>
+
+    <!-- Buttons row -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal">
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnCommitDialogCancel"
+            android:layout_width="0dp"
+            android:layout_weight="1"
+            android:layout_height="42dp"
+            android:text="Cancel"
+            android:textSize="13sp"
+            android:textColor="#64748B"
+            android:insetTop="0dp"
+            android:insetBottom="0dp"
+            style="@style/Widget.Material3.Button.TextButton"
+            android:layout_marginEnd="8dp"/>
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnCommitDialogConfirm"
+            android:layout_width="0dp"
+            android:layout_weight="1"
+            android:layout_height="42dp"
+            android:text="Commit"
+            android:textSize="13sp"
+            android:textColor="#34D399"
+            android:insetTop="0dp"
+            android:insetBottom="0dp"
+            app:backgroundTint="#14532D"
+            app:strokeColor="#166534"
+            app:strokeWidth="1dp"
+            app:cornerRadius="10dp"
+            style="@style/Widget.Material3.Button.OutlinedButton"/>
+    </LinearLayout>
+
+</LinearLayout>

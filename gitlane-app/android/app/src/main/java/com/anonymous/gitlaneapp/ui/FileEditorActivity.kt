@@ -42,8 +42,10 @@ class FileEditorActivity : AppCompatActivity() {
         repoDir = File(repoPath)
         git = GitManager(this)
 
-        supportActionBar?.title = fileToEdit.name
-        supportActionBar?.setDisplayHomeAsUpEnabled(true)
+        // Custom header
+        supportActionBar?.hide()
+        binding.tvEditorFileName.text = fileToEdit.name
+        binding.btnBackEditor.setOnClickListener { finish() }
 
         loadFileContent()
 

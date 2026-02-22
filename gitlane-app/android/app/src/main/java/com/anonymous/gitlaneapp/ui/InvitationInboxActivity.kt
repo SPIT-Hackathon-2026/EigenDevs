@@ -74,27 +74,8 @@ fun InboxScreen(viewModel: InboxViewModel, onBack: () -> Unit) {
             topBar = {
                 TopAppBar(
                     title = {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
                         Text("Collaboration Inbox", fontWeight = FontWeight.Black)
-                        state.userInfo?.let { user ->
-                            Spacer(Modifier.width(12.dp))
-                            AsyncImage(
-                                model = user.avatarUrl,
-                                contentDescription = "Profile",
-                                modifier = Modifier
-                                    .size(32.dp)
-                                    .clip(CircleShape)
-                                    .background(Color.Gray.copy(alpha = 0.2f))
-                            )
-                            Spacer(Modifier.width(8.dp))
-                            Text(
-                                text = user.login,
-                                style = MaterialTheme.typography.labelLarge,
-                                color = Color(0xFF64FFDA).copy(alpha = 0.8f)
-                            )
-                        }
-                    }
-                },
+                    },
                     navigationIcon = {
                         IconButton(onClick = onBack) {
                             Icon(Icons.Default.ArrowBack, contentDescription = "Back")

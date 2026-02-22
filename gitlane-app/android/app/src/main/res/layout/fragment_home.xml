@@ -1,0 +1,226 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.coordinatorlayout.widget.CoordinatorLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#000000">
+
+    <!-- Scrollable content -->
+    <androidx.core.widget.NestedScrollView
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:paddingBottom="88dp"
+        android:clipToPadding="false"
+        android:fillViewport="true">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:paddingTop="32dp"
+            android:paddingHorizontal="14dp">
+
+            <!-- ══ Header: GitLane title ══ -->
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="GitLane"
+                android:textSize="24sp"
+                android:textStyle="bold"
+                android:textColor="@color/text_primary"
+                android:fontFamily="sans-serif-medium"
+                android:layout_marginBottom="4dp"/>
+
+            <!-- Username + Synced row -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:layout_marginBottom="18dp">
+
+                <TextView
+                    android:id="@+id/tvUsername"
+                    android:layout_width="0dp"
+                    android:layout_weight="1"
+                    android:layout_height="wrap_content"
+                    android:text="Not connected"
+                    android:textSize="12sp"
+                    android:textColor="@color/text_secondary"/>
+
+                <!-- Synced badge -->
+                <com.google.android.material.card.MaterialCardView
+                    android:id="@+id/cardSynced"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    app:cardCornerRadius="20dp"
+                    app:cardElevation="0dp"
+                    app:strokeWidth="1dp"
+                    app:strokeColor="#22C55E"
+                    app:cardBackgroundColor="#0D1F10">
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="● Synced"
+                        android:textSize="10sp"
+                        android:textColor="#22C55E"
+                        android:paddingHorizontal="10dp"
+                        android:paddingVertical="4dp"/>
+                </com.google.android.material.card.MaterialCardView>
+            </LinearLayout>
+
+            <!-- ══ + New Repository button ══ -->
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnCreateRepo"
+                android:layout_width="match_parent"
+                android:layout_height="48dp"
+                android:text="+ New Repository"
+                android:textAllCaps="false"
+                android:textSize="14sp"
+                android:textStyle="bold"
+                android:layout_marginBottom="10dp"
+                app:backgroundTint="@color/accent"
+                app:cornerRadius="12dp"/>
+
+            <!-- ══ Clone Repository button ══ -->
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnGoToClone"
+                android:layout_width="match_parent"
+                android:layout_height="48dp"
+                android:text="Clone Repository"
+                android:textAllCaps="false"
+                android:textSize="14sp"
+                android:layout_marginBottom="22dp"
+                style="@style/Widget.Material3.Button.OutlinedButton"
+                app:strokeColor="@color/glass_border"
+                android:textColor="@color/text_secondary"
+                app:cornerRadius="12dp"/>
+
+            <!-- ══ Local Repositories section ══ -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:layout_marginBottom="8dp">
+                <TextView
+                    android:id="@+id/tvRepoCount"
+                    android:layout_width="0dp"
+                    android:layout_weight="1"
+                    android:layout_height="wrap_content"
+                    android:text="Local Repositories"
+                    android:textSize="12sp"
+                    android:textAllCaps="true"
+                    android:letterSpacing="0.08"
+                    android:textColor="@color/text_secondary"
+                    android:textStyle="bold"/>
+            </LinearLayout>
+
+            <!-- Repo list inside a card container -->
+            <com.google.android.material.card.MaterialCardView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="16dp"
+                app:cardCornerRadius="14dp"
+                app:cardElevation="0dp"
+                app:strokeWidth="1dp"
+                app:strokeColor="@color/glass_border"
+                app:cardBackgroundColor="@color/glass_bg_card">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical">
+
+                    <!-- Empty state -->
+                    <TextView
+                        android:id="@+id/tvEmptyRepos"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="No local repositories yet.\nTap + New Repository to get started."
+                        android:textSize="12sp"
+                        android:textColor="@color/text_secondary"
+                        android:gravity="center"
+                        android:padding="24dp"
+                        android:visibility="gone"/>
+
+                    <androidx.recyclerview.widget.RecyclerView
+                        android:id="@+id/rvRepos"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:nestedScrollingEnabled="false"
+                        android:paddingVertical="4dp"
+                        android:clipToPadding="false"/>
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+
+            <!-- ══ Fetch My Repos section ══ -->
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="GitHub"
+                android:textSize="12sp"
+                android:textAllCaps="true"
+                android:letterSpacing="0.08"
+                android:textColor="@color/text_secondary"
+                android:textStyle="bold"
+                android:layout_marginBottom="8dp"/>
+
+            <com.google.android.material.card.MaterialCardView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="10dp"
+                app:cardCornerRadius="14dp"
+                app:cardElevation="0dp"
+                app:strokeWidth="1dp"
+                app:strokeColor="@color/glass_border"
+                app:cardBackgroundColor="@color/glass_bg_card">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="14dp">
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btnFetchGithub"
+                        android:layout_width="match_parent"
+                        android:layout_height="44dp"
+                        android:text="🌐  Fetch My Repos"
+                        android:textAllCaps="false"
+                        android:textSize="13sp"
+                        android:layout_marginBottom="8dp"
+                        app:backgroundTint="@color/accent"
+                        app:cornerRadius="10dp"/>
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btnSearchPublic"
+                        android:layout_width="match_parent"
+                        android:layout_height="40dp"
+                        android:text="🔍  Search GitHub"
+                        android:textAllCaps="false"
+                        android:textSize="12sp"
+                        style="@style/Widget.Material3.Button.OutlinedButton"
+                        app:strokeColor="@color/glass_border"
+                        android:textColor="@color/text_secondary"
+                        app:cornerRadius="10dp"/>
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+
+        </LinearLayout>
+    </androidx.core.widget.NestedScrollView>
+
+    <!-- QR FAB -->
+    <com.google.android.material.floatingactionbutton.FloatingActionButton
+        android:id="@+id/fabScanQr"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="bottom|end"
+        android:layout_margin="20dp"
+        android:contentDescription="Scan QR to import repo"
+        app:backgroundTint="@color/accent"
+        app:tint="@android:color/white"
+        app:srcCompat="@android:drawable/ic_menu_camera"/>
+
+</androidx.coordinatorlayout.widget.CoordinatorLayout>

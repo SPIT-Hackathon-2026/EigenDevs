@@ -1,432 +1,511 @@
 <?xml version="1.0" encoding="utf-8"?>
-<androidx.core.widget.NestedScrollView
+<LinearLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/bg_primary"
-    android:fillViewport="true">
+    android:orientation="vertical"
+    android:background="#000000">
 
+    <!-- ── Sticky Header ───────────────────────────────────────────────── -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical"
-        android:padding="16dp">
+        android:paddingHorizontal="16dp"
+        android:paddingTop="20dp"
+        android:paddingBottom="12dp">
 
-        <!-- Repo info card -->
-        <com.google.android.material.card.MaterialCardView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginBottom="16dp"
-            app:cardCornerRadius="16dp"
-            app:cardElevation="4dp"
-            app:cardBackgroundColor="@color/surface">
-
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="vertical"
-                android:padding="16dp">
-
-                <TextView
-                    android:id="@+id/tvBranch"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="🌿 main"
-                    android:textSize="16sp"
-                    android:textColor="@color/accent_green"
-                    android:textStyle="bold" />
-
-                <TextView
-                    android:id="@+id/tvCommitCount"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="0 commits"
-                    android:textSize="13sp"
-                    android:textColor="@color/text_secondary"
-                    android:layout_marginTop="4dp" />
-
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="horizontal"
-                    android:layout_marginTop="12dp">
-
-                    <com.google.android.material.button.MaterialButton
-                        android:id="@+id/btnBranches"
-                        android:layout_width="0dp"
-                        android:layout_weight="1"
-                        android:layout_height="wrap_content"
-                        android:text="🌿 Branches"
-                        style="@style/Widget.Material3.Button.OutlinedButton"
-                        android:padding="0dp"
-                        android:layout_marginEnd="4dp"
-                        android:textSize="12sp" />
-
-                    <com.google.android.material.button.MaterialButton
-                        android:id="@+id/btnTags"
-                        android:layout_width="0dp"
-                        android:layout_weight="1"
-                        android:layout_height="wrap_content"
-                        android:text="🏷️ Tags"
-                        style="@style/Widget.Material3.Button.OutlinedButton"
-                        android:padding="0dp"
-                        android:layout_marginEnd="4dp"
-                        android:textSize="12sp" />
-
-                    <com.google.android.material.button.MaterialButton
-                        android:id="@+id/btnRemotes"
-                        android:layout_width="0dp"
-                        android:layout_weight="1"
-                        android:layout_height="wrap_content"
-                        android:text="🔁 Remotes"
-                        style="@style/Widget.Material3.Button.OutlinedButton"
-                        android:padding="0dp"
-                        android:textSize="12sp" />
-                </LinearLayout>
-
-                <com.google.android.material.button.MaterialButton
-                    android:id="@+id/btnAddCollaborator"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="8dp"
-                    android:text="👤 Add Collaborators"
-                    style="@style/Widget.Material3.Button.TextButton"
-                    android:textColor="@color/accent"
-                    android:visibility="gone" /> <!-- Hidden by default, only shown if remote is GitHub -->
-            </LinearLayout>
-        </com.google.android.material.card.MaterialCardView>
-
-        <!-- Collaborators info (only for GitHub) -->
+        <!-- Back row -->
         <LinearLayout
-            android:id="@+id/llCollaboratorsContainer"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="vertical"
-            android:layout_marginBottom="16dp"
-            android:visibility="gone">
+            android:orientation="horizontal"
+            android:gravity="center_vertical">
 
+            <ImageButton
+                android:id="@+id/btnHeaderBack"
+                android:layout_width="32dp"
+                android:layout_height="32dp"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:src="@android:drawable/ic_media_previous"
+                app:tint="#64748B"
+                android:contentDescription="Back"
+                android:layout_marginEnd="10dp"/>
+
+            <!-- Breadcrumb path -->
             <TextView
-                android:layout_width="wrap_content"
+                android:id="@+id/tvBreadcrumb"
+                android:layout_width="0dp"
+                android:layout_weight="1"
                 android:layout_height="wrap_content"
-                android:text="👥 Team Members"
-                android:textSize="15sp"
-                android:textStyle="bold"
-                android:textColor="@color/accent"
-                android:layout_marginBottom="6dp" />
-
-            <com.google.android.material.card.MaterialCardView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                app:cardCornerRadius="10dp"
-                app:cardElevation="0dp"
-                app:strokeWidth="1dp"
-                app:strokeColor="#33FFFFFF"
-                app:cardBackgroundColor="@android:color/transparent">
-
-                <TextView
-                    android:id="@+id/tvCollaboratorList"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:padding="12dp"
-                    android:text="Loading..."
-                    android:textSize="13sp"
-                    android:lineSpacingExtra="4dp"
-                    android:textColor="@android:color/white" />
-            </com.google.android.material.card.MaterialCardView>
+                android:textSize="11sp"
+                android:textColor="#475569"
+                android:singleLine="true"
+                android:ellipsize="start"/>
         </LinearLayout>
 
-        <!-- Files section -->
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Files"
-            android:textSize="17sp"
-            android:textStyle="bold"
-            android:textColor="@color/text_primary"
-            android:layout_marginBottom="8dp" />
-
-        <com.google.android.material.card.MaterialCardView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginBottom="16dp"
-            app:cardCornerRadius="12dp"
-            app:cardElevation="2dp"
-            app:cardBackgroundColor="@color/surface">
-
-            <androidx.recyclerview.widget.RecyclerView
-                android:id="@+id/rvFiles"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:nestedScrollingEnabled="false"
-                android:minHeight="60dp" />
-        </com.google.android.material.card.MaterialCardView>
-
-        <!-- Create file section -->
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Create File"
-            android:textSize="17sp"
-            android:textStyle="bold"
-            android:textColor="@color/text_primary"
-            android:layout_marginBottom="8dp" />
-
-        <com.google.android.material.card.MaterialCardView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginBottom="16dp"
-            app:cardCornerRadius="12dp"
-            app:cardElevation="2dp"
-            app:cardBackgroundColor="@color/surface">
-
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="vertical"
-                android:padding="14dp">
-
-                <com.google.android.material.textfield.TextInputLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:hint="File name (e.g. hello.txt)"
-                    style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
-                    android:layout_marginBottom="8dp">
-
-                    <com.google.android.material.textfield.TextInputEditText
-                        android:id="@+id/etFileName"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:singleLine="true"
-                        android:inputType="text"
-                        android:textColor="@color/text_primary" />
-                </com.google.android.material.textfield.TextInputLayout>
-
-                <com.google.android.material.textfield.TextInputLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:hint="File content..."
-                    style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
-                    android:layout_marginBottom="12dp">
-
-                    <com.google.android.material.textfield.TextInputEditText
-                        android:id="@+id/etFileContent"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:minLines="4"
-                        android:gravity="top"
-                        android:inputType="textMultiLine"
-                        android:textColor="@color/text_primary" />
-                </com.google.android.material.textfield.TextInputLayout>
-
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="horizontal">
-
-                    <com.google.android.material.button.MaterialButton
-                        android:id="@+id/btnCreateFile"
-                        android:layout_width="0dp"
-                        android:layout_weight="1"
-                        android:layout_height="wrap_content"
-                        android:text="Create File"
-                        android:layout_marginEnd="8dp"
-                        app:backgroundTint="@color/accent"
-                        app:cornerRadius="10dp" />
-
-                    <com.google.android.material.button.MaterialButton
-                        android:id="@+id/btnImportFile"
-                        android:layout_width="0dp"
-                        android:layout_weight="1"
-                        android:layout_height="wrap_content"
-                        android:text="🖼️ Import"
-                        style="@style/Widget.Material3.Button.OutlinedButton"
-                        app:cornerRadius="10dp" />
-                </LinearLayout>
-            </LinearLayout>
-        </com.google.android.material.card.MaterialCardView>
-
-
-        <!-- Merge Conflict Alert -->
-        <com.google.android.material.card.MaterialCardView
-            android:id="@+id/cardConflict"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginBottom="16dp"
-            android:visibility="gone"
-            app:cardCornerRadius="12dp"
-            app:cardElevation="2dp"
-            app:strokeColor="#FF5252"
-            app:strokeWidth="1.5dp"
-            app:cardBackgroundColor="#26FF5252">
-
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="vertical"
-                android:padding="12dp">
-                
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="🚨 Merge Conflict Detected!"
-                    android:textSize="16sp"
-                    android:textStyle="bold"
-                    android:textColor="#FF5252"
-                    android:layout_marginBottom="4dp" />
-
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="Some files have conflicting changes. Resolve them to continue."
-                    android:textSize="13sp"
-                    android:textColor="#FF8A80"
-                    android:layout_marginBottom="12dp" />
-
-                <com.google.android.material.button.MaterialButton
-                    android:id="@+id/btnResolveConflict"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:text="Resolve Conflicts"
-                    app:backgroundTint="#FF5252"
-                    android:textColor="@android:color/white"
-                    app:cornerRadius="8dp" />
-            </LinearLayout>
-        </com.google.android.material.card.MaterialCardView>
-
-        <!-- Changes to Commit -->
+        <!-- Repo name line -->
         <LinearLayout
-            android:id="@+id/llChangesContainer"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:layout_marginTop="6dp">
+
+            <TextView
+                android:id="@+id/tvBranch"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="🌿 main"
+                android:textSize="13sp"
+                android:textColor="#34D399"
+                android:textStyle="bold"
+                android:background="#0D1F17"
+                android:paddingHorizontal="8dp"
+                android:paddingVertical="3dp"
+                android:layout_marginEnd="8dp"/>
+
+            <TextView
+                android:id="@+id/tvCommitCount"
+                android:layout_width="0dp"
+                android:layout_weight="1"
+                android:layout_height="wrap_content"
+                android:text="0 commits"
+                android:textSize="11sp"
+                android:textColor="#64748B"/>
+        </LinearLayout>
+    </LinearLayout>
+
+    <!-- ── Scrollable Content ──────────────────────────────────────────── -->
+    <androidx.core.widget.NestedScrollView
+        android:layout_width="match_parent"
+        android:layout_height="match_parent">
+
+        <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical"
-            android:visibility="gone">
+            android:paddingHorizontal="16dp"
+            android:paddingBottom="32dp">
 
+            <!-- ── Repo actions row ─────────────────────────────────────── -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:layout_marginBottom="16dp">
+
+                <!-- Branches -->
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnBranches"
+                    android:layout_width="0dp"
+                    android:layout_weight="1"
+                    android:layout_height="36dp"
+                    android:text="Branches"
+                    android:textSize="11sp"
+                    android:textColor="#94A3B8"
+                    android:letterSpacing="0.02"
+                    style="@style/Widget.Material3.Button.OutlinedButton"
+                    app:strokeColor="#1E293B"
+                    app:cornerRadius="8dp"
+                    android:layout_marginEnd="6dp"
+                    android:insetTop="0dp"
+                    android:insetBottom="0dp"/>
+
+                <!-- Tags -->
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnTags"
+                    android:layout_width="0dp"
+                    android:layout_weight="1"
+                    android:layout_height="36dp"
+                    android:text="Tags"
+                    android:textSize="11sp"
+                    android:textColor="#94A3B8"
+                    style="@style/Widget.Material3.Button.OutlinedButton"
+                    app:strokeColor="#1E293B"
+                    app:cornerRadius="8dp"
+                    android:layout_marginEnd="6dp"
+                    android:insetTop="0dp"
+                    android:insetBottom="0dp"/>
+
+                <!-- Remotes -->
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnRemotes"
+                    android:layout_width="0dp"
+                    android:layout_weight="1"
+                    android:layout_height="36dp"
+                    android:text="Remotes"
+                    android:textSize="11sp"
+                    android:textColor="#94A3B8"
+                    style="@style/Widget.Material3.Button.OutlinedButton"
+                    app:strokeColor="#1E293B"
+                    app:cornerRadius="8dp"
+                    android:insetTop="0dp"
+                    android:insetBottom="0dp"/>
+            </LinearLayout>
+
+            <!-- Add Collaborator (GitHub only) -->
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnAddCollaborator"
+                android:layout_width="match_parent"
+                android:layout_height="36dp"
+                android:layout_marginBottom="16dp"
+                android:text="+ Add Collaborator"
+                android:textSize="12sp"
+                android:textColor="#38BDF8"
+                android:insetTop="0dp"
+                android:insetBottom="0dp"
+                style="@style/Widget.Material3.Button.OutlinedButton"
+                app:strokeColor="#0E3A55"
+                app:cornerRadius="8dp"
+                android:visibility="gone"/>
+
+            <!-- Collaborators panel -->
+            <LinearLayout
+                android:id="@+id/llCollaboratorsContainer"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:layout_marginBottom="16dp"
+                android:visibility="gone">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Team Members"
+                    android:textSize="12sp"
+                    android:textStyle="bold"
+                    android:textColor="#64748B"
+                    android:letterSpacing="0.08"
+                    android:layout_marginBottom="6dp"/>
+
+                <com.google.android.material.card.MaterialCardView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    app:cardCornerRadius="8dp"
+                    app:cardElevation="0dp"
+                    app:strokeWidth="1dp"
+                    app:strokeColor="#1E293B"
+                    app:cardBackgroundColor="#0A0F1E">
+
+                    <TextView
+                        android:id="@+id/tvCollaboratorList"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:padding="12dp"
+                        android:text="Loading…"
+                        android:textSize="12sp"
+                        android:lineSpacingExtra="4dp"
+                        android:textColor="#94A3B8"/>
+                </com.google.android.material.card.MaterialCardView>
+            </LinearLayout>
+
+            <!-- ── Section: Files ───────────────────────────────────────── -->
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Changes to Commit"
-                android:textSize="17sp"
+                android:text="FILES"
+                android:textSize="10sp"
                 android:textStyle="bold"
-                android:textColor="@color/accent"
-                android:layout_marginBottom="8dp" />
+                android:letterSpacing="0.12"
+                android:textColor="#475569"
+                android:layout_marginBottom="8dp"/>
+
+            <!-- Back to parent folder (visible only when inside a subfolder) -->
+            <LinearLayout
+                android:id="@+id/llFolderBack"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:paddingVertical="8dp"
+                android:paddingHorizontal="4dp"
+                android:layout_marginBottom="4dp"
+                android:background="?attr/selectableItemBackground"
+                android:visibility="gone">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="←"
+                    android:textSize="16sp"
+                    android:textColor="#64748B"
+                    android:layout_marginEnd="8dp"/>
+
+                <TextView
+                    android:id="@+id/tvFolderBackLabel"
+                    android:layout_width="0dp"
+                    android:layout_weight="1"
+                    android:layout_height="wrap_content"
+                    android:text=".. / back"
+                    android:textSize="13sp"
+                    android:textColor="#64748B"
+                    android:fontFamily="monospace"/>
+            </LinearLayout>
 
             <com.google.android.material.card.MaterialCardView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="20dp"
+                app:cardCornerRadius="12dp"
+                app:cardElevation="0dp"
+                app:strokeWidth="1dp"
+                app:strokeColor="#1E293B"
+                app:cardBackgroundColor="#0A0F1E">
+
+                <androidx.recyclerview.widget.RecyclerView
+                    android:id="@+id/rvFiles"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:nestedScrollingEnabled="false"
+                    android:minHeight="60dp"/>
+            </com.google.android.material.card.MaterialCardView>
+
+            <!-- ── Merge Conflict Alert ──────────────────────────────────── -->
+            <com.google.android.material.card.MaterialCardView
+                android:id="@+id/cardConflict"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginBottom="16dp"
-                app:cardCornerRadius="12dp"
-                app:cardElevation="2dp"
-                app:cardBackgroundColor="#1A00B0FF"> <!-- Light blue tint for changes -->
+                android:visibility="gone"
+                app:cardCornerRadius="10dp"
+                app:cardElevation="0dp"
+                app:strokeColor="#EF4444"
+                app:strokeWidth="1dp"
+                app:cardBackgroundColor="#1AEF4444">
 
                 <LinearLayout
-                    android:id="@+id/llChangesList"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:orientation="vertical"
                     android:padding="12dp">
-                    <!-- Files will be added here dynamically -->
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="🚨 Merge Conflict Detected!"
+                        android:textSize="13sp"
+                        android:textStyle="bold"
+                        android:textColor="#EF4444"
+                        android:layout_marginBottom="4dp"/>
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Some files have conflicting changes. Resolve them to continue."
+                        android:textSize="12sp"
+                        android:textColor="#FDA4AF"
+                        android:layout_marginBottom="10dp"/>
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btnResolveConflict"
+                        android:layout_width="match_parent"
+                        android:layout_height="36dp"
+                        android:text="Resolve Conflicts"
+                        android:textSize="12sp"
+                        android:insetTop="0dp"
+                        android:insetBottom="0dp"
+                        app:backgroundTint="#EF4444"
+                        android:textColor="#FFFFFF"
+                        app:cornerRadius="8dp"/>
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
-        </LinearLayout>
 
-        <!-- Commit section -->
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Stage &amp; Commit"
-            android:textSize="17sp"
-            android:textStyle="bold"
-            android:textColor="@color/text_primary"
-            android:layout_marginBottom="8dp" />
-
-        <com.google.android.material.card.MaterialCardView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginBottom="16dp"
-            app:cardCornerRadius="12dp"
-            app:cardElevation="2dp"
-            app:cardBackgroundColor="@color/surface">
-
+            <!-- ── Pending Changes ──────────────────────────────────────── -->
             <LinearLayout
+                android:id="@+id/llChangesContainer"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="vertical"
-                android:padding="14dp">
+                android:visibility="gone"
+                android:layout_marginBottom="16dp">
 
-                <com.google.android.material.textfield.TextInputLayout
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="PENDING CHANGES"
+                    android:textSize="10sp"
+                    android:textStyle="bold"
+                    android:letterSpacing="0.12"
+                    android:textColor="#475569"
+                    android:layout_marginBottom="8dp"/>
+
+                <com.google.android.material.card.MaterialCardView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:hint="Commit message"
-                    style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
-                    android:layout_marginBottom="12dp">
+                    app:cardCornerRadius="10dp"
+                    app:cardElevation="0dp"
+                    app:strokeWidth="1dp"
+                    app:strokeColor="#172554"
+                    app:cardBackgroundColor="#0A0F1E">
 
-                    <com.google.android.material.textfield.TextInputEditText
-                        android:id="@+id/etCommitMsg"
+                    <LinearLayout
+                        android:id="@+id/llChangesList"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:singleLine="true"
-                        android:inputType="text"
-                        android:textColor="@color/text_primary" />
-                </com.google.android.material.textfield.TextInputLayout>
+                        android:orientation="vertical"
+                        android:padding="12dp"/>
+                </com.google.android.material.card.MaterialCardView>
+            </LinearLayout>
+
+            <!-- ── Stage & Commit — compact trigger button ─────────────── -->
+            <!-- disabled by default; RepoDetailActivity enables it when changes exist -->
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnCommit"
+                android:layout_width="match_parent"
+                android:layout_height="44dp"
+                android:layout_marginBottom="8dp"
+                android:text="Stage All &amp; Commit"
+                android:textSize="13sp"
+                android:textColor="#34D399"
+                android:insetTop="0dp"
+                android:insetBottom="0dp"
+                app:backgroundTint="#14532D"
+                app:strokeColor="#166534"
+                app:strokeWidth="1dp"
+                app:cornerRadius="10dp"
+                android:enabled="false"
+                android:alpha="0.40"
+                style="@style/Widget.Material3.Button.OutlinedButton"/>
+
+            <!-- stub — keeps binding.etCommitMsg valid -->
+            <com.google.android.material.textfield.TextInputEditText
+                android:id="@+id/etCommitMsg"
+                android:layout_width="0dp"
+                android:layout_height="0dp"
+                android:visibility="gone"/>
+
+
+            <!-- ── Create File + Import buttons ───────────────────────── -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:layout_marginBottom="8dp">
 
                 <com.google.android.material.button.MaterialButton
-                    android:id="@+id/btnCommit"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:text="Stage All &amp; Commit"
-                    app:backgroundTint="@color/accent_green"
-                    app:cornerRadius="10dp" />
+                    android:id="@+id/btnCreateFile"
+                    android:layout_width="0dp"
+                    android:layout_weight="1"
+                    android:layout_height="44dp"
+                    android:text="+ Create File"
+                    android:textSize="13sp"
+                    android:textColor="#94A3B8"
+                    android:insetTop="0dp"
+                    android:insetBottom="0dp"
+                    style="@style/Widget.Material3.Button.OutlinedButton"
+                    app:strokeColor="#1E293B"
+                    app:cornerRadius="10dp"
+                    android:layout_marginEnd="8dp"/>
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnImportFile"
+                    android:layout_width="0dp"
+                    android:layout_weight="1"
+                    android:layout_height="44dp"
+                    android:text="↑ Import"
+                    android:textSize="13sp"
+                    android:textColor="#64748B"
+                    android:insetTop="0dp"
+                    android:insetBottom="0dp"
+                    style="@style/Widget.Material3.Button.OutlinedButton"
+                    app:strokeColor="#1E293B"
+                    app:cornerRadius="10dp"/>
             </LinearLayout>
-        </com.google.android.material.card.MaterialCardView>
 
-        <!-- Push button -->
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/btnPush"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="⬆️ Push to Remote (GitHub)"
-            app:backgroundTint="@color/accent"
-            app:cornerRadius="10dp"
-            android:textColor="@android:color/white"
-            android:layout_marginBottom="12dp" />
+            <!-- stubs — keep binding.etFileName/etFileContent valid -->
+            <com.google.android.material.textfield.TextInputEditText
+                android:id="@+id/etFileName"
+                android:layout_width="0dp"
+                android:layout_height="0dp"
+                android:visibility="gone"/>
+            <com.google.android.material.textfield.TextInputEditText
+                android:id="@+id/etFileContent"
+                android:layout_width="0dp"
+                android:layout_height="0dp"
+                android:visibility="gone"/>
 
-        <!-- Modern High-Fidelity Graph Button -->
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/btnModernHistory"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="📈 Pro Visual Graph"
-            app:backgroundTint="#8B5CF6"
-            app:cornerRadius="10dp"
-            android:textColor="@android:color/white"
-            android:layout_marginBottom="12dp" />
 
-        <!-- History button -->
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/btnHistory"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="📋 View Commit History"
-            style="@style/Widget.Material3.Button.OutlinedButton"
-            app:cornerRadius="10dp"
-            app:strokeColor="@color/accent"
-            android:textColor="@color/accent"
-            android:layout_marginBottom="12dp" />
+            <!-- ── Section: Actions ─────────────────────────────────────── -->
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="ACTIONS"
+                android:textSize="10sp"
+                android:textStyle="bold"
+                android:letterSpacing="0.12"
+                android:textColor="#475569"
+                android:layout_marginBottom="8dp"/>
 
-        <!-- Share via QR button -->
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/btnShareQr"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="📤 Share via QR Code"
-            app:backgroundTint="@color/surface"
-            app:strokeColor="@color/accent_green"
-            app:strokeWidth="1.5dp"
-            style="@style/Widget.Material3.Button.OutlinedButton"
-            app:cornerRadius="10dp"
-            android:textColor="@color/accent_green"
-            android:layout_marginBottom="24dp" />
+            <!-- Push -->
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnPush"
+                android:layout_width="match_parent"
+                android:layout_height="42dp"
+                android:text="↑  Push to Remote"
+                android:textSize="13sp"
+                android:textColor="#38BDF8"
+                android:insetTop="0dp"
+                android:insetBottom="0dp"
+                style="@style/Widget.Material3.Button.OutlinedButton"
+                app:strokeColor="#0E3A55"
+                app:cornerRadius="8dp"
+                android:layout_marginBottom="8dp"/>
 
-    </LinearLayout>
-</androidx.core.widget.NestedScrollView>
+            <!-- Commit History + Visual Graph row -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:layout_marginBottom="8dp">
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnHistory"
+                    android:layout_width="0dp"
+                    android:layout_weight="1"
+                    android:layout_height="40dp"
+                    android:text="History"
+                    android:textSize="12sp"
+                    android:textColor="#94A3B8"
+                    android:insetTop="0dp"
+                    android:insetBottom="0dp"
+                    style="@style/Widget.Material3.Button.OutlinedButton"
+                    app:strokeColor="#1E293B"
+                    app:cornerRadius="8dp"
+                    android:layout_marginEnd="8dp"/>
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnModernHistory"
+                    android:layout_width="0dp"
+                    android:layout_weight="1"
+                    android:layout_height="40dp"
+                    android:text="Visual Graph"
+                    android:textSize="12sp"
+                    android:textColor="#94A3B8"
+                    android:insetTop="0dp"
+                    android:insetBottom="0dp"
+                    style="@style/Widget.Material3.Button.OutlinedButton"
+                    app:strokeColor="#1E293B"
+                    app:cornerRadius="8dp"/>
+            </LinearLayout>
+
+            <!-- Share via QR -->
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnShareQr"
+                android:layout_width="match_parent"
+                android:layout_height="40dp"
+                android:text="Share via QR Code"
+                android:textSize="12sp"
+                android:textColor="#94A3B8"
+                android:insetTop="0dp"
+                android:insetBottom="0dp"
+                style="@style/Widget.Material3.Button.OutlinedButton"
+                app:strokeColor="#1E293B"
+                app:cornerRadius="8dp"
+                android:layout_marginBottom="24dp"/>
+
+        </LinearLayout>
+    </androidx.core.widget.NestedScrollView>
+
+</LinearLayout>

@@ -234,11 +234,17 @@ class GitHubApiManager(private val token: String) {
 
     data class UserInfo(
         val login: String,
-        val avatarUrl: String
+        val name: String,
+        val bio: String,
+        val avatarUrl: String,
+        val publicRepos: Int,
+        val privateRepos: Int,
+        val followers: Int,
+        val following: Int
     )
 
     /**
-     * Gets profile info for the authenticated user.
+     * Gets full profile info for the authenticated user.
      */
     suspend fun getUserProfile(): UserInfo = withContext(Dispatchers.IO) {
         val url = URL("https://api.github.com/user")
@@ -259,8 +265,79 @@ class GitHubApiManager(private val token: String) {
         val json = JSONObject(response)
         UserInfo(
             login = json.getString("login"),
-            avatarUrl = json.getString("avatar_url")
+            name = json.optString("name", ""),
+            bio = json.optString("bio", ""),
+            avatarUrl = json.getString("avatar_url"),
+            publicRepos = json.optInt("public_repos", 0),
+            privateRepos = json.optInt("total_private_repos", 0),
+            followers = json.optInt("followers", 0),
+            following = json.optInt("following", 0)
         )
+    }
+
+    /**
+     * Fetches the contribution heatmap for [username] using the GitHub Events API.
+     * Returns a 364-element IntArray (week-major order, Mon→Sun),
+     * where each value is 0..4 mapped from the raw event count per day.
+     *
+     * GitHub's REST API provides up to 300 public events (last ~90 days for active users).
+     * For the remaining days we simply leave them as 0.
+     */
+    suspend fun getUserContributions(username: String): IntArray = withContext(Dispatchers.IO) {
+        val counts = HashMap<String, Int>()          // "yyyy-MM-dd" → event count
+        val sdf = java.text.SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'", java.util.Locale.US)
+        val dayFmt = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.US)
+        sdf.timeZone = java.util.TimeZone.getTimeZone("UTC")
+
+        // Fetch up to 10 pages × 30 events = 300 events
+        for (page in 1..10) {
+            val url = URL("https://api.github.com/users/$username/events?per_page=30&page=$page")
+            val conn = url.openConnection() as HttpURLConnection
+            conn.requestMethod = "GET"
+            conn.connectTimeout = 8000
+            conn.readTimeout = 8000
+            conn.setRequestProperty("Authorization", "token $token")
+            conn.setRequestProperty("Accept", "application/vnd.github.v3+json")
+            conn.setRequestProperty("User-Agent", "GitLane-Android")
+
+            if (conn.responseCode != 200) break
+            val body = conn.inputStream.bufferedReader().use { it.readText() }
+            val arr = JSONArray(body)
+            if (arr.length() == 0) break
+
+            for (i in 0 until arr.length()) {
+                val evt = arr.getJSONObject(i)
+                val createdAt = evt.optString("created_at", "") ?: continue
+                try {
+                    val date = sdf.parse(createdAt) ?: continue
+                    val day = dayFmt.format(date)
+                    counts[day] = (counts[day] ?: 0) + 1
+                } catch (_: Exception) {}
+            }
+        }
+
+        // Build a 364-cell array (52 weeks × 7 days) ending on today
+        val today = java.util.Calendar.getInstance(java.util.TimeZone.getTimeZone("UTC"))
+        val result = IntArray(364)
+        // Find the day-of-week of the earliest cell so col 0 starts on Monday
+        val startCal = today.clone() as java.util.Calendar
+        startCal.add(java.util.Calendar.DAY_OF_YEAR, -363)
+
+        for (i in 0 until 364) {
+            val cell = startCal.clone() as java.util.Calendar
+            cell.add(java.util.Calendar.DAY_OF_YEAR, i)
+            val key = dayFmt.format(cell.time)
+            val raw = counts[key] ?: 0
+            // Map raw count → 0..4 levels
+            result[i] = when {
+                raw == 0 -> 0
+                raw <= 2 -> 1
+                raw <= 5 -> 2
+                raw <= 9 -> 3
+                else     -> 4
+            }
+        }
+        result
     }
 
     /**

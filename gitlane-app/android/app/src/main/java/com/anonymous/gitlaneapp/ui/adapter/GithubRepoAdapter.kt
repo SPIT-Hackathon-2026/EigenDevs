@@ -10,7 +10,8 @@ import com.anonymous.gitlaneapp.databinding.ItemGithubRepoBinding
 import com.anonymous.gitlaneapp.ui.GithubRepo
 
 class GithubRepoAdapter(
-    private val onClick: (GithubRepo) -> Unit
+    private val onClone:         (GithubRepo) -> Unit,
+    private val onCommitHistory: (GithubRepo) -> Unit
 ) : ListAdapter<GithubRepo, GithubRepoAdapter.ViewHolder>(DiffCallback()) {
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
@@ -24,11 +25,28 @@ class GithubRepoAdapter(
 
     inner class ViewHolder(private val b: ItemGithubRepoBinding) : RecyclerView.ViewHolder(b.root) {
         fun bind(repo: GithubRepo) {
-            b.tvRepoName.text = repo.name
+            b.tvRepoName.text        = repo.name
+            b.tvFullName.text        = repo.fullName
             b.tvRepoDescription.text = repo.description.ifBlank { "No description" }
             b.tvPrivateBadge.visibility = if (repo.isPrivate) View.VISIBLE else View.GONE
-            
-            b.root.setOnClickListener { onClick(repo) }
+
+            // Language badge
+            if (!repo.language.isNullOrBlank()) {
+                b.tvLanguage.text       = repo.language
+                b.tvLanguage.visibility = View.VISIBLE
+            } else {
+                b.tvLanguage.visibility = View.GONE
+            }
+
+            // Stars
+            b.tvStars.text = "⭐ ${repo.starCount}"
+
+            // Updated (show short date)
+            b.tvUpdated.text = repo.updatedAt.take(10)
+
+            // Buttons
+            b.btnCloneLocally.setOnClickListener  { onClone(repo) }
+            b.btnCommitHistory.setOnClickListener { onCommitHistory(repo) }
         }
     }
 

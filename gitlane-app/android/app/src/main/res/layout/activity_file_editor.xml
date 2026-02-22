@@ -1,135 +1,203 @@
 <?xml version="1.0" encoding="utf-8"?>
-<androidx.coordinatorlayout.widget.CoordinatorLayout
+<LinearLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/bg_primary">
+    android:orientation="vertical"
+    android:background="#000000">
 
+    <!-- ── Header bar ──────────────────────────────────────────────────── -->
     <LinearLayout
         android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:orientation="vertical">
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:paddingHorizontal="12dp"
+        android:paddingTop="16dp"
+        android:paddingBottom="10dp"
+        android:background="#000000">
 
-        <FrameLayout
+        <!-- Back / close -->
+        <ImageButton
+            android:id="@+id/btnBackEditor"
+            android:layout_width="36dp"
+            android:layout_height="36dp"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:src="@android:drawable/ic_media_previous"
+            app:tint="#64748B"
+            android:contentDescription="Back"
+            android:layout_marginEnd="8dp"/>
+
+        <!-- File name breadcrumb -->
+        <TextView
+            android:id="@+id/tvEditorFileName"
+            android:layout_width="0dp"
+            android:layout_weight="1"
+            android:layout_height="wrap_content"
+            android:textSize="14sp"
+            android:textStyle="bold"
+            android:textColor="#E2E8F0"
+            android:fontFamily="monospace"
+            android:singleLine="true"
+            android:ellipsize="middle"
+            android:text="file.txt"/>
+
+        <!-- Save button (compact) -->
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnSave"
+            android:layout_width="wrap_content"
+            android:layout_height="32dp"
+            android:text="Save"
+            android:textSize="12sp"
+            android:textColor="#E2E8F0"
+            android:insetTop="0dp"
+            android:insetBottom="0dp"
+            android:paddingHorizontal="14dp"
+            app:backgroundTint="#0F172A"
+            app:strokeColor="#334155"
+            app:strokeWidth="1dp"
+            app:cornerRadius="8dp"
+            style="@style/Widget.Material3.Button.OutlinedButton"
+            android:layout_marginStart="8dp"/>
+    </LinearLayout>
+
+    <!-- Thin divider -->
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:background="#0F172A"/>
+
+    <!-- ── Editor area ──────────────────────────────────────────────────── -->
+    <FrameLayout
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1">
+
+        <com.google.android.material.textfield.TextInputLayout
+            android:id="@+id/tilFileContent"
             android:layout_width="match_parent"
-            android:layout_height="0dp"
-            android:layout_weight="1">
+            android:layout_height="match_parent"
+            style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
+            app:boxStrokeWidth="0dp"
+            app:boxStrokeWidthFocused="0dp"
+            android:padding="8dp">
 
-            <com.google.android.material.textfield.TextInputLayout
-                android:id="@+id/tilFileContent"
+            <com.google.android.material.textfield.TextInputEditText
+                android:id="@+id/etFileContent"
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
-                style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
-                app:boxStrokeWidth="0dp"
-                app:boxStrokeWidthFocused="0dp"
-                android:padding="8dp">
+                android:gravity="top|start"
+                android:inputType="textMultiLine"
+                android:hint="File content…"
+                android:scrollbars="vertical"
+                android:textSize="13sp"
+                android:fontFamily="monospace"
+                android:lineSpacingExtra="2dp"
+                android:textColor="#E2E8F0"
+                android:background="@android:color/transparent"/>
+        </com.google.android.material.textfield.TextInputLayout>
 
-                <com.google.android.material.textfield.TextInputEditText
-                    android:id="@+id/etFileContent"
-                    android:layout_width="match_parent"
-                    android:layout_height="match_parent"
-                    android:gravity="top|start"
-                    android:inputType="textMultiLine"
-                    android:hint="File content..."
-                    android:scrollbars="vertical"
-                    android:textSize="14sp"
-                    android:fontFamily="monospace"
-                    android:textColor="@color/text_primary"
-                    android:background="@android:color/transparent" />
-            </com.google.android.material.textfield.TextInputLayout>
-
-            <ImageView
-                android:id="@+id/ivFileImage"
-                android:layout_width="match_parent"
-                android:layout_height="match_parent"
-                android:scaleType="fitCenter"
-                android:visibility="gone"
-                android:padding="8dp" />
-        </FrameLayout>
-
-        <!-- Conflict Resolution Bar (Hidden by default) -->
-        <LinearLayout
-            android:id="@+id/llConflictActions"
+        <!-- Image view for non-text files -->
+        <ImageView
+            android:id="@+id/ivFileImage"
             android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:scaleType="fitCenter"
+            android:visibility="gone"
+            android:padding="16dp"/>
+    </FrameLayout>
+
+    <!-- ── Conflict Resolution Bar ─────────────────────────────────────── -->
+    <LinearLayout
+        android:id="@+id/llConflictActions"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:paddingHorizontal="12dp"
+        android:paddingVertical="10dp"
+        android:background="#1AEF4444"
+        android:visibility="gone">
+
+        <TextView
+            android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:orientation="vertical"
-            android:padding="12dp"
-            android:background="#1AEE4444" 
-            android:visibility="gone">
-
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="Conflict Detected"
-                android:textStyle="bold"
-                android:textColor="#EF4444"
-                android:textSize="12sp"
-                android:layout_marginBottom="8dp" />
-
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="horizontal">
-
-                <com.google.android.material.button.MaterialButton
-                    android:id="@+id/btnAcceptCurrent"
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:text="Current"
-                    style="@style/Widget.Material3.Button.TonalButton"
-                    android:textSize="10sp"
-                    android:layout_marginEnd="4dp"
-                    app:cornerRadius="4dp" />
-
-                <com.google.android.material.button.MaterialButton
-                    android:id="@+id/btnAcceptIncoming"
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:text="Incoming"
-                    style="@style/Widget.Material3.Button.TonalButton"
-                    android:textSize="10sp"
-                    android:layout_marginEnd="4dp"
-                    app:cornerRadius="4dp" />
-
-                <com.google.android.material.button.MaterialButton
-                    android:id="@+id/btnAcceptBoth"
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:text="Both"
-                    style="@style/Widget.Material3.Button.TonalButton"
-                    android:textSize="10sp"
-                    app:cornerRadius="4dp" />
-            </LinearLayout>
-        </LinearLayout>
+            android:text="Conflict Detected"
+            android:textStyle="bold"
+            android:textColor="#EF4444"
+            android:textSize="11sp"
+            android:layout_marginBottom="6dp"/>
 
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:padding="16dp"
-            android:background="@color/surface">
+            android:orientation="horizontal">
 
             <com.google.android.material.button.MaterialButton
-                android:id="@+id/btnCancel"
+                android:id="@+id/btnAcceptCurrent"
                 android:layout_width="0dp"
+                android:layout_height="34dp"
                 android:layout_weight="1"
-                android:layout_height="wrap_content"
-                android:text="Cancel"
+                android:text="Current"
+                android:textSize="11sp"
+                android:textColor="#94A3B8"
+                android:insetTop="0dp"
+                android:insetBottom="0dp"
                 style="@style/Widget.Material3.Button.OutlinedButton"
-                android:layout_marginEnd="8dp" />
+                app:strokeColor="#374151"
+                app:cornerRadius="6dp"
+                android:layout_marginEnd="4dp"/>
 
             <com.google.android.material.button.MaterialButton
-                android:id="@+id/btnSave"
+                android:id="@+id/btnAcceptIncoming"
                 android:layout_width="0dp"
+                android:layout_height="34dp"
                 android:layout_weight="1"
-                android:layout_height="wrap_content"
-                android:text="Save"
-                app:backgroundTint="@color/accent" />
+                android:text="Incoming"
+                android:textSize="11sp"
+                android:textColor="#94A3B8"
+                android:insetTop="0dp"
+                android:insetBottom="0dp"
+                style="@style/Widget.Material3.Button.OutlinedButton"
+                app:strokeColor="#374151"
+                app:cornerRadius="6dp"
+                android:layout_marginEnd="4dp"/>
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnAcceptBoth"
+                android:layout_width="0dp"
+                android:layout_height="34dp"
+                android:layout_weight="1"
+                android:text="Both"
+                android:textSize="11sp"
+                android:textColor="#94A3B8"
+                android:insetTop="0dp"
+                android:insetBottom="0dp"
+                style="@style/Widget.Material3.Button.OutlinedButton"
+                app:strokeColor="#374151"
+                app:cornerRadius="6dp"/>
         </LinearLayout>
     </LinearLayout>
 
-</androidx.coordinatorlayout.widget.CoordinatorLayout>
+    <!-- ── Bottom toolbar (Cancel) ─────────────────────────────────────── -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:paddingHorizontal="16dp"
+        android:paddingVertical="10dp"
+        android:background="#050A14">
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnCancel"
+            android:layout_width="wrap_content"
+            android:layout_height="34dp"
+            android:text="Discard changes"
+            android:textSize="11sp"
+            android:textColor="#475569"
+            android:insetTop="0dp"
+            android:insetBottom="0dp"
+            style="@style/Widget.Material3.Button.TextButton"/>
+    </LinearLayout>
+</LinearLayout>

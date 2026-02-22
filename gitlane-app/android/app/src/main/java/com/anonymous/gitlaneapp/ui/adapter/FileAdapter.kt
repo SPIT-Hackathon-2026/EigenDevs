@@ -1,6 +1,7 @@
 package com.anonymous.gitlaneapp.ui.adapter
 
 import android.view.LayoutInflater
+import android.view.View
 import android.view.ViewGroup
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.ListAdapter
@@ -27,10 +28,11 @@ class FileAdapter(
         fun bind(file: File) {
             binding.tvFileName.text = file.name
             binding.tvFileIcon.text = if (file.isDirectory) "📁" else "📄"
-            
-            binding.root.setOnClickListener {
-                onClick(file)
-            }
+
+            // Show chevron (›) for directories so user knows it's navigable
+            binding.tvChevron.visibility = if (file.isDirectory) View.VISIBLE else View.GONE
+
+            binding.root.setOnClickListener { onClick(file) }
         }
     }
 

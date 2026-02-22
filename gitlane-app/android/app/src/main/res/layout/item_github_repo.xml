@@ -4,11 +4,13 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:layout_marginHorizontal="8dp"
-    android:layout_marginVertical="4dp"
-    app:cardCornerRadius="12dp"
-    app:cardElevation="2dp"
-    app:cardBackgroundColor="@color/surface">
+    android:layout_marginHorizontal="14dp"
+    android:layout_marginVertical="6dp"
+    app:cardCornerRadius="16dp"
+    app:cardElevation="0dp"
+    app:strokeWidth="1dp"
+    app:strokeColor="@color/glass_border"
+    app:cardBackgroundColor="@color/glass_bg_card">
 
     <LinearLayout
         android:layout_width="match_parent"
@@ -16,44 +18,159 @@
         android:orientation="vertical"
         android:padding="16dp">
 
+        <!-- Top Row: Repo name + URL badge + private badge -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="horizontal"
-            android:gravity="center_vertical">
+            android:gravity="center_vertical"
+            android:layout_marginBottom="8dp">
 
-            <TextView
-                android:id="@+id/tvRepoName"
+            <!-- Repo icon -->
+            <com.google.android.material.card.MaterialCardView
+                android:layout_width="34dp"
+                android:layout_height="34dp"
+                android:layout_marginEnd="10dp"
+                app:cardCornerRadius="8dp"
+                app:cardElevation="0dp"
+                app:cardBackgroundColor="#1E2D3D"
+                app:strokeWidth="0dp">
+                <ImageView
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:padding="7dp"
+                    android:src="@android:drawable/ic_menu_save"
+                    app:tint="#38BDF8"
+                    android:contentDescription="Repo"
+                    android:scaleType="fitCenter"/>
+            </com.google.android.material.card.MaterialCardView>
+
+            <!-- Name + full name -->
+            <LinearLayout
                 android:layout_width="0dp"
                 android:layout_weight="1"
                 android:layout_height="wrap_content"
-                android:text="Repo Name"
-                android:textSize="16sp"
-                android:textStyle="bold"
-                android:textColor="@color/text_primary" />
+                android:orientation="vertical">
 
+                <TextView
+                    android:id="@+id/tvRepoName"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:textSize="14sp"
+                    android:textStyle="bold"
+                    android:textColor="@color/text_primary"
+                    android:maxLines="1"
+                    android:ellipsize="end"/>
+
+                <TextView
+                    android:id="@+id/tvFullName"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:textSize="10sp"
+                    android:textColor="@color/accent"
+                    android:layout_marginTop="1dp"
+                    android:maxLines="1"
+                    android:ellipsize="end"/>
+            </LinearLayout>
+
+            <!-- Private badge -->
             <TextView
                 android:id="@+id/tvPrivateBadge"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="🔒 Private"
-                android:textSize="10sp"
-                android:textColor="@color/accent"
-                android:background="@android:color/transparent"
+                android:text="🔒"
+                android:textSize="12sp"
                 android:visibility="gone"
-                android:layout_marginStart="8dp" />
+                android:layout_marginStart="6dp"/>
         </LinearLayout>
 
+        <!-- Description -->
         <TextView
             android:id="@+id/tvRepoDescription"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Description"
             android:textSize="12sp"
             android:textColor="@color/text_secondary"
-            android:layout_marginTop="4dp"
             android:maxLines="2"
-            android:ellipsize="end" />
+            android:ellipsize="end"
+            android:layout_marginBottom="12dp"/>
 
+        <!-- Meta row: language · stars · updated -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:layout_marginBottom="14dp">
+
+            <TextView
+                android:id="@+id/tvLanguage"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textSize="10sp"
+                android:textColor="#38BDF8"
+                android:background="@drawable/bg_glass"
+                android:paddingHorizontal="8dp"
+                android:paddingVertical="3dp"
+                android:layout_marginEnd="8dp"
+                android:visibility="gone"/>
+
+            <TextView
+                android:id="@+id/tvStars"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textSize="10sp"
+                android:textColor="@color/text_secondary"
+                android:layout_marginEnd="8dp"/>
+
+            <TextView
+                android:id="@+id/tvUpdated"
+                android:layout_width="0dp"
+                android:layout_weight="1"
+                android:layout_height="wrap_content"
+                android:textSize="10sp"
+                android:textColor="@color/text_secondary"
+                android:gravity="end"/>
+        </LinearLayout>
+
+        <!-- Divider -->
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            android:background="@color/glass_border"
+            android:layout_marginBottom="12dp"/>
+
+        <!-- Bottom action buttons -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal">
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnCommitHistory"
+                android:layout_width="0dp"
+                android:layout_weight="1"
+                android:layout_height="38dp"
+                android:text="Commit History"
+                android:textAllCaps="false"
+                android:textSize="12sp"
+                android:layout_marginEnd="8dp"
+                style="@style/Widget.Material3.Button.OutlinedButton"
+                app:strokeColor="@color/glass_border"
+                android:textColor="@color/text_secondary"
+                app:cornerRadius="10dp"/>
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnCloneLocally"
+                android:layout_width="0dp"
+                android:layout_weight="1"
+                android:layout_height="38dp"
+                android:text="Clone Locally"
+                android:textAllCaps="false"
+                android:textSize="12sp"
+                android:textStyle="bold"
+                app:backgroundTint="@color/accent"
+                app:cornerRadius="10dp"/>
+        </LinearLayout>
     </LinearLayout>
 </com.google.android.material.card.MaterialCardView>

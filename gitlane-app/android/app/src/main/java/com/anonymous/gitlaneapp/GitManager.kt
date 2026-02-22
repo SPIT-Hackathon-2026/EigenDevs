@@ -112,6 +112,13 @@ class GitManager(context: Context) {
         openGit(repoDir).use { it.add().addFilepattern(".").call() }
     }
 
+    /** Stage removal of a specific tracked file (equivalent to git rm --cached <path>). */
+    suspend fun stageRemoval(repoDir: File, relativePath: String) = withContext(Dispatchers.IO) {
+        openGit(repoDir).use { git ->
+            git.rm().addFilepattern(relativePath).setCached(false).call()
+        }
+    }
+
     suspend fun commit(repoDir: File, message: String): String = withContext(Dispatchers.IO) {
         openGit(repoDir).use { git ->
             val commit = git.commit()

@@ -46,7 +46,23 @@ class RepoDetailActivity : AppCompatActivity() {
         currentPath = repoDir
 
         git = GitManager(this)
-        supportActionBar?.title = repoName
+        supportActionBar?.hide()
+
+        // Safety net: log + toast any coroutine crash instead of killing the process
+        val crashHandler = kotlinx.coroutines.CoroutineExceptionHandler { _, throwable ->
+            android.util.Log.e("RepoDetail", "Unhandled coroutine exception", throwable)
+            Toast.makeText(this, "⚠️ Error: ${throwable.localizedMessage}", Toast.LENGTH_LONG).show()
+        }
+
+        // Custom header back button (in activity_repo_detail.xml)
+        binding.btnHeaderBack.setOnClickListener {
+            if (currentPath != repoDir) {
+                currentPath = currentPath.parentFile ?: repoDir
+                loadRepoInfo()
+            } else {
+                finish()
+            }
+        }
 
         setupRecyclerView()
         setupButtons()
@@ -119,15 +135,9 @@ class RepoDetailActivity : AppCompatActivity() {
     }
 
     private fun setupButtons() {
-        // Create File
+        // Create File — opens custom dialog
         binding.btnCreateFile.setOnClickListener {
-            val name = binding.etFileName.text.toString().trim()
-            val content = binding.etFileContent.text.toString()
-            if (name.isEmpty()) {
-                binding.etFileName.error = "Enter a file name"
-                return@setOnClickListener
-            }
-            createFile(name, content)
+            showCreateFileDialog()
         }
 
         // Import File
@@ -135,14 +145,9 @@ class RepoDetailActivity : AppCompatActivity() {
             importLauncher.launch("*/*")
         }
 
-        // Stage & Commit
+        // Stage & Commit — opens custom dialog (button is enabled in updateStatusUI)
         binding.btnCommit.setOnClickListener {
-            val msg = binding.etCommitMsg.text.toString().trim()
-            if (msg.isEmpty()) {
-                binding.etCommitMsg.error = "Enter a commit message"
-                return@setOnClickListener
-            }
-            stageAndCommit(msg)
+            showCommitDialog()
         }
 
         // View History
@@ -218,6 +223,12 @@ class RepoDetailActivity : AppCompatActivity() {
         // Add Collaborator
         binding.btnAddCollaborator.setOnClickListener {
             showAddCollaboratorDialog()
+        }
+
+        // Folder back button in FILES section
+        binding.llFolderBack.setOnClickListener {
+            currentPath = currentPath.parentFile ?: repoDir
+            loadRepoInfo()
         }
     }
 
@@ -353,6 +364,7 @@ class RepoDetailActivity : AppCompatActivity() {
 
     private fun loadRepoInfo() {
         lifecycleScope.launch {
+            try {
             val branch = withContext(Dispatchers.IO) { git.currentBranch(repoDir) }
             val count  = withContext(Dispatchers.IO) { git.commitCount(repoDir) }
             val status = withContext(Dispatchers.IO) { git.getStatus(repoDir) }
@@ -366,12 +378,21 @@ class RepoDetailActivity : AppCompatActivity() {
 
             binding.tvBranch.text = "🌿 $branch"
             binding.tvCommitCount.text = "$count commit${if (count != 1) "s" else ""}"
-            binding.btnHistory.text = "View History ($count)"
+            binding.btnHistory.text = "History ($count)"
             fileAdapter.submitList(files)
 
-            // Update title to show breadcrumb or folder
-            val relative = currentPath.absolutePath.removePrefix(repoDir.parent ?: "")
-            supportActionBar?.subtitle = relative
+            // Breadcrumb in custom header
+            val relative = currentPath.absolutePath
+                .removePrefix(repoDir.parent ?: "")
+                .replace("\\", "/")
+            binding.tvBreadcrumb.text = relative
+
+            // Show/hide folder back button inside FILES section
+            val isInsideSubfolder = currentPath != repoDir
+            binding.llFolderBack.visibility = if (isInsideSubfolder) View.VISIBLE else View.GONE
+            if (isInsideSubfolder) {
+                binding.tvFolderBackLabel.text = "..  /  ${currentPath.parentFile?.name ?: "root"}"
+            }
 
             // Show 'Add Collaborator' if linked to GitHub
             val remotes = withContext(Dispatchers.IO) { git.listRemotes(repoDir) }
@@ -387,6 +408,37 @@ class RepoDetailActivity : AppCompatActivity() {
 
             // Update uncommitted changes UI
             updateStatusUI(status)
+            } catch (e: Exception) {
+                android.util.Log.e("RepoDetail", "loadRepoInfo failed", e)
+                Toast.makeText(this@RepoDetailActivity, "⚠️ Refresh error: ${e.localizedMessage}", Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
+
+    private fun createFile(name: String, content: String) {
+        lifecycleScope.launch {
+            try {
+                withContext(Dispatchers.IO) { git.writeFile(currentPath, name, content) }
+                Toast.makeText(this@RepoDetailActivity, "✅ File '$name' created", Toast.LENGTH_SHORT).show()
+                loadRepoInfo()
+            } catch (e: Exception) {
+                Toast.makeText(this@RepoDetailActivity, "❌ ${e.message}", Toast.LENGTH_LONG).show()
+            }
+        }
+    }
+
+    private fun stageAndCommit(message: String) {
+        lifecycleScope.launch {
+            try {
+                val sha = withContext(Dispatchers.IO) {
+                    git.stageAll(repoDir)
+                    git.commit(repoDir, message)
+                }
+                Toast.makeText(this@RepoDetailActivity, "✅ Committed [$sha]", Toast.LENGTH_SHORT).show()
+                loadRepoInfo()
+            } catch (e: Exception) {
+                Toast.makeText(this@RepoDetailActivity, "❌ Commit failed: ${e.message}", Toast.LENGTH_LONG).show()
+            }
         }
     }
 
@@ -396,37 +448,113 @@ class RepoDetailActivity : AppCompatActivity() {
                 val fullName = com.anonymous.gitlaneapp.GitHubApiManager.extractFullName(remoteUrl) ?: return@launch
                 val creds = com.anonymous.gitlaneapp.CredentialsManager(this@RepoDetailActivity)
                 val token = creds.getPat("github.com") ?: return@launch
-                
+
                 val api = com.anonymous.gitlaneapp.GitHubApiManager(token)
-                
-                // Try listing collaborators (requires push access)
+
                 val list = try {
                     api.listCollaborators(fullName)
                 } catch (e: Exception) {
+                    // 403 = no push access → fall back to contributors; otherwise show empty
                     if (e.message?.contains("403") == true) {
-                        // Fallback to contributors for public repos where we don't have push access
-                        api.listContributors(fullName)
+                        try { api.listContributors(fullName) } catch (_: Exception) { emptyList() }
                     } else {
-                        throw e
+                        emptyList()
                     }
                 }
-                
+
                 binding.tvCollaboratorList.text = if (list.isEmpty()) {
                     "No members or contributors found"
                 } else {
                     "Team: " + list.joinToString(", ")
                 }
             } catch (e: Exception) {
-                binding.tvCollaboratorList.text = "Error fetching: ${e.message}"
+                android.util.Log.w("RepoDetail", "fetchCollaborators failed", e)
+                binding.tvCollaboratorList.text = ""
             }
         }
     }
 
+    // ── Dialog: Create File ───────────────────────────────────────────────────
+    private fun showCreateFileDialog() {
+        val dialogView = layoutInflater.inflate(R.layout.dialog_create_file, null)
+        val dialog = android.app.Dialog(this, android.R.style.Theme_Black_NoTitleBar).apply {
+            setContentView(dialogView)
+            window?.apply {
+                setLayout(
+                    android.view.ViewGroup.LayoutParams.MATCH_PARENT,
+                    android.view.ViewGroup.LayoutParams.WRAP_CONTENT
+                )
+                setGravity(android.view.Gravity.BOTTOM)
+                setBackgroundDrawableResource(R.drawable.bg_dialog_rounded)
+            }
+        }
+
+        val etName    = dialogView.findViewById<com.google.android.material.textfield.TextInputEditText>(R.id.etDialogFileName)
+        val etContent = dialogView.findViewById<com.google.android.material.textfield.TextInputEditText>(R.id.etDialogFileContent)
+
+        dialogView.findViewById<android.view.View>(R.id.btnDialogClose).setOnClickListener   { dialog.dismiss() }
+        dialogView.findViewById<android.view.View>(R.id.btnDialogCancel).setOnClickListener  { dialog.dismiss() }
+        dialogView.findViewById<android.view.View>(R.id.btnDialogCreate).setOnClickListener {
+            val name = etName.text.toString().trim()
+            if (name.isEmpty()) { etName.error = "Enter a file name"; return@setOnClickListener }
+            val content = etContent.text.toString()
+            dialog.dismiss()
+            createFile(name, content)
+        }
+        dialog.show()
+    }
+
+    // ── Dialog: Commit ────────────────────────────────────────────────────────
+    private fun showCommitDialog() {
+        val dialogView = layoutInflater.inflate(R.layout.dialog_commit, null)
+        val dialog = android.app.Dialog(this, android.R.style.Theme_Black_NoTitleBar).apply {
+            setContentView(dialogView)
+            window?.apply {
+                setLayout(
+                    android.view.ViewGroup.LayoutParams.MATCH_PARENT,
+                    android.view.ViewGroup.LayoutParams.WRAP_CONTENT
+                )
+                setGravity(android.view.Gravity.BOTTOM)
+                setBackgroundDrawableResource(R.drawable.bg_dialog_rounded)
+            }
+        }
+
+        val etMsg   = dialogView.findViewById<com.google.android.material.textfield.TextInputEditText>(R.id.etCommitDialogMsg)
+        val tvSummary = dialogView.findViewById<android.widget.TextView>(R.id.tvCommitChangeSummary)
+
+        // Populate change summary
+        lifecycleScope.launch {
+            val status = withContext(kotlinx.coroutines.Dispatchers.IO) { git.getStatus(repoDir) }
+            val parts = mutableListOf<String>()
+            if (status.modified.isNotEmpty())   parts.add("${status.modified.size} modified")
+            if (status.added.isNotEmpty())       parts.add("${status.added.size} added")
+            if (status.untracked.isNotEmpty())   parts.add("${status.untracked.size} new")
+            if (status.removed.isNotEmpty())     parts.add("${status.removed.size} deleted")
+            tvSummary.text = if (parts.isEmpty()) "" else "Changes: ${parts.joinToString(" · ")}"
+        }
+
+        dialogView.findViewById<android.view.View>(R.id.btnCommitDialogClose).setOnClickListener  { dialog.dismiss() }
+        dialogView.findViewById<android.view.View>(R.id.btnCommitDialogCancel).setOnClickListener { dialog.dismiss() }
+        dialogView.findViewById<android.view.View>(R.id.btnCommitDialogConfirm).setOnClickListener {
+            val msg = etMsg.text.toString().trim()
+            if (msg.isEmpty()) { etMsg.error = "Enter a commit message"; return@setOnClickListener }
+            dialog.dismiss()
+            stageAndCommit(msg)
+        }
+        dialog.show()
+    }
+
     private fun updateStatusUI(status: com.anonymous.gitlaneapp.GitStatus) {
-        // Show/Hide Merge Conflict Alert
+        // Show/Hide conflict alert
         binding.cardConflict.visibility = if (status.conflicting.isNotEmpty()) View.VISIBLE else View.GONE
 
-        if (!status.hasChanges()) {
+        val hasChanges = status.hasChanges()
+
+        // Enable commit button only when there are pending changes
+        binding.btnCommit.isEnabled = hasChanges
+        binding.btnCommit.alpha = if (hasChanges) 1f else 0.40f
+
+        if (!hasChanges) {
             binding.llChangesContainer.visibility = View.GONE
             return
         }
@@ -439,18 +567,30 @@ class RepoDetailActivity : AppCompatActivity() {
         val toDisplay = allChanges.take(displayLimit)
 
         toDisplay.forEach { path ->
-            val textView = android.widget.TextView(this).apply {
-                val isConflict = status.conflicting.contains(path)
-                val icon = when {
-                    isConflict -> "❗"
-                    status.modified.contains(path) || status.added.contains(path) -> "📝"
-                    status.untracked.contains(path) -> "🆕"
-                    status.removed.contains(path) -> "🗑️"
-                    else -> "•"
-                }
+            // Row container
+            val row = android.widget.LinearLayout(this).apply {
+                orientation = android.widget.LinearLayout.HORIZONTAL
+                gravity = android.view.Gravity.CENTER_VERTICAL
+                setPadding(0, 4, 0, 4)
+            }
+
+            val isConflict  = status.conflicting.contains(path)
+            val isUntracked = status.untracked.contains(path)
+            val icon = when {
+                isConflict  -> "❗"
+                status.modified.contains(path) || status.added.contains(path) -> "📝"
+                isUntracked -> "🆕"
+                status.removed.contains(path) -> "🗑️"
+                else -> "•"
+            }
+
+            // File label
+            val label = android.widget.TextView(this).apply {
                 text = "$icon $path"
                 textSize = 13f
-                setPadding(0, 4, 0, 4)
+                layoutParams = android.widget.LinearLayout.LayoutParams(
+                    0, android.widget.LinearLayout.LayoutParams.WRAP_CONTENT, 1f
+                )
                 if (isConflict) {
                     setTextColor(android.graphics.Color.parseColor("#FF5252"))
                     setTypeface(null, android.graphics.Typeface.BOLD)
@@ -458,12 +598,26 @@ class RepoDetailActivity : AppCompatActivity() {
                     setTextColor(resources.getColor(R.color.text_primary, theme))
                 }
             }
-            binding.llChangesList.addView(textView)
+
+            // Delete / remove button
+            val deleteBtn = android.widget.TextView(this).apply {
+                text = "✕"
+                textSize = 13f
+                setTextColor(android.graphics.Color.parseColor("#475569"))
+                setPadding(24, 0, 4, 0)
+                setOnClickListener {
+                    deleteOrRemoveFile(path, isUntracked)
+                }
+            }
+
+            row.addView(label)
+            row.addView(deleteBtn)
+            binding.llChangesList.addView(row)
         }
 
         if (allChanges.size > displayLimit) {
             val moreText = android.widget.TextView(this).apply {
-                text = "... and ${allChanges.size - displayLimit} more changes"
+                text = "… and ${allChanges.size - displayLimit} more changes"
                 textSize = 12f
                 setPadding(0, 8, 0, 4)
                 setTextColor(resources.getColor(R.color.text_secondary, theme))
@@ -473,58 +627,35 @@ class RepoDetailActivity : AppCompatActivity() {
         }
     }
 
+    /** Delete an untracked file physically, or stage removal of a tracked file. */
+    private fun deleteOrRemoveFile(relativePath: String, isUntracked: Boolean) {
+        lifecycleScope.launch {
+            try {
+                withContext(Dispatchers.IO) {
+                    val target = File(repoDir, relativePath)
+                    if (isUntracked) {
+                        target.delete()
+                    } else {
+                        // Stage the deletion so git knows about it
+                        git.stageRemoval(repoDir, relativePath)
+                        target.delete()
+                    }
+                }
+                Toast.makeText(this@RepoDetailActivity, "🗑️ Removed $relativePath", Toast.LENGTH_SHORT).show()
+                loadRepoInfo()
+            } catch (e: Exception) {
+                Toast.makeText(this@RepoDetailActivity, "❌ ${e.message}", Toast.LENGTH_LONG).show()
+            }
+        }
+    }
+
+
     override fun onBackPressed() {
         if (currentPath != repoDir) {
             currentPath = currentPath.parentFile ?: repoDir
             loadRepoInfo()
         } else {
             super.onBackPressed()
-        }
-    }
-
-    private fun createFile(name: String, content: String) {
-        binding.btnCreateFile.isEnabled = false
-        lifecycleScope.launch {
-            try {
-                withContext(Dispatchers.IO) {
-                    git.writeFile(repoDir, name, content)
-                }
-                binding.etFileName.setText("")
-                binding.etFileContent.setText("")
-                Toast.makeText(this@RepoDetailActivity, "✅ File \"$name\" created", Toast.LENGTH_SHORT).show()
-                loadRepoInfo()
-            } catch (e: Exception) {
-                Toast.makeText(this@RepoDetailActivity, "❌ ${e.message}", Toast.LENGTH_LONG).show()
-            } finally {
-                binding.btnCreateFile.isEnabled = true
-            }
-        }
-    }
-
-    private fun stageAndCommit(message: String) {
-        binding.btnCommit.isEnabled = false
-        lifecycleScope.launch {
-            try {
-                withContext(Dispatchers.IO) {
-                    git.stageAll(repoDir)
-                    git.commit(repoDir, message)
-                }
-                binding.etCommitMsg.setText("")
-                Toast.makeText(
-                    this@RepoDetailActivity,
-                    "✅ Committed!",
-                    Toast.LENGTH_SHORT
-                ).show()
-                loadRepoInfo()
-            } catch (e: Exception) {
-                Toast.makeText(
-                    this@RepoDetailActivity,
-                    "❌ Commit failed: ${e.message}",
-                    Toast.LENGTH_LONG
-                ).show()
-            } finally {
-                binding.btnCommit.isEnabled = true
-            }
         }
     }
 }

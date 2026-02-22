@@ -1,0 +1,87 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:background="#0A0F1E"
+    android:paddingBottom="24dp">
+
+    <!-- Handle -->
+    <View
+        android:layout_width="36dp"
+        android:layout_height="4dp"
+        android:layout_gravity="center_horizontal"
+        android:background="#334155"
+        android:layout_marginTop="12dp"
+        android:layout_marginBottom="16dp"/>
+
+    <!-- Header -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:paddingHorizontal="20dp"
+        android:paddingBottom="12dp">
+
+        <TextView
+            android:id="@+id/tvCommitRepoName"
+            android:layout_width="0dp"
+            android:layout_weight="1"
+            android:layout_height="wrap_content"
+            android:text="Commit History"
+            android:textSize="16sp"
+            android:textStyle="bold"
+            android:textColor="#FFFFFF"/>
+
+        <ImageButton
+            android:id="@+id/btnCloseCommits"
+            android:layout_width="32dp"
+            android:layout_height="32dp"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:src="@android:drawable/ic_menu_close_clear_cancel"
+            app:tint="#64748B"
+            android:contentDescription="Close"/>
+    </LinearLayout>
+
+    <!-- Divider -->
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:background="#1E293B"
+        android:layout_marginBottom="8dp"/>
+
+    <!-- Loader -->
+    <ProgressBar
+        android:id="@+id/pbCommits"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center_horizontal"
+        android:layout_marginVertical="20dp"
+        android:visibility="gone"/>
+
+    <!-- Empty state -->
+    <TextView
+        android:id="@+id/tvNoCommits"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="No commits found"
+        android:textSize="13sp"
+        android:textColor="#64748B"
+        android:gravity="center"
+        android:padding="24dp"
+        android:visibility="gone"/>
+
+    <!-- Commits list -->
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/rvCommits"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:maxHeight="380dp"
+        android:paddingHorizontal="16dp"
+        android:nestedScrollingEnabled="false"
+        android:clipToPadding="false"/>
+
+</LinearLayout>

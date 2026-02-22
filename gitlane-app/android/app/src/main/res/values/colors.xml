@@ -34,4 +34,11 @@
     <color name="colorOnSurface">#F1F5F9</color>
     <color name="colorError">#EF4444</color>
     <color name="colorOnError">#FFFFFF</color>
+    <color name="on_accent_nav">#94A3B8</color>
+
+    <!-- Glassmorphism Tokens -->
+    <color name="glass_bg">#26FFFFFF</color> <!-- 15% White -->
+    <color name="glass_border">#33FFFFFF</color> <!-- 20% White -->
+    <color name="glass_bg_card">#1AFFFFFF</color> <!-- 10% White -->
+    <color name="glass_accent">#4D3B82F6</color> <!-- 30% Accent Blue -->
 </resources>
