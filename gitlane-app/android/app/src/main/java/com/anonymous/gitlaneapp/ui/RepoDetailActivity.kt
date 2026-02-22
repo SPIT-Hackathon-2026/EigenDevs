@@ -206,7 +206,6 @@ class RepoDetailActivity : AppCompatActivity() {
                 putExtra(CopilotActivity.EXTRA_REPO_PATH, repoDir.absolutePath)
             })
         }
-        }
 
         // Import File
         binding.btnImportFile.setOnClickListener {
