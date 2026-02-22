@@ -151,6 +151,29 @@ class RebaseViewModel(
         }
     }
 
+    fun updateRewordMessage(sha: String, newMessage: String) {
+        val currentState = _uiState.value
+        if (currentState is RebaseUiState.Planning) {
+            val newPlan = currentState.plan.map {
+                if (it.sha == sha) it.copy(newMessage = newMessage, action = RebaseAction.REWORD) else it
+            }
+            _uiState.value = RebaseUiState.Planning(newPlan, currentState.upstream)
+        }
+    }
+
+    fun moveStep(fromIndex: Int, toIndex: Int) {
+        val currentState = _uiState.value
+        if (currentState is RebaseUiState.Planning) {
+            val list = currentState.plan.toMutableList()
+            if (fromIndex !in list.indices || toIndex !in list.indices) return
+            
+            val item = list.removeAt(fromIndex)
+            list.add(toIndex, item)
+            
+            _uiState.value = RebaseUiState.Planning(list, currentState.upstream)
+        }
+    }
+
     fun applySuggestions() {
         val state = _uiState.value
         if (state is RebaseUiState.Planning) {

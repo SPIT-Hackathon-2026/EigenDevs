@@ -1,15 +1,15 @@
 package com.anonymous.gitlaneapp.ui
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
-import androidx.compose.material.icons.filled.AutoAwesome
-import androidx.compose.material.icons.filled.PlayArrow
-import androidx.compose.material.icons.filled.Warning
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -17,6 +17,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.anonymous.gitlaneapp.rebase.*
@@ -109,7 +110,6 @@ fun RebaseScreen(
                     NoBranchView(viewModel)
                 }
                 is RebaseUiState.RebasingInProgress -> {
-                    // Git is already mid-rebase (no saved plan found). Let user continue or abort.
                     Box(Modifier.fillMaxSize().padding(24.dp), contentAlignment = Alignment.Center) {
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
                             Text("⏸ Rebase Interrupted", color = Color(0xFFFFC107), fontSize = 22.sp, fontWeight = FontWeight.Bold)
@@ -133,7 +133,7 @@ fun RebaseScreen(
                                 onClick = { viewModel.abortRebase() },
                                 modifier = Modifier.fillMaxWidth().height(52.dp),
                                 colors = ButtonDefaults.outlinedButtonColors(contentColor = Color(0xFFFF5252)),
-                                border = androidx.compose.foundation.BorderStroke(1.5.dp, Color(0xFFFF5252))
+                                border = BorderStroke(1.5.dp, Color(0xFFFF5252))
                             ) {
                                 Text("🗑 Abort Rebase", fontWeight = FontWeight.Bold, fontSize = 16.sp)
                             }
@@ -242,57 +242,141 @@ fun NoBranchView(viewModel: RebaseViewModel) {
     }
 }
 
+// ─── Rebase Planning ──────────────────────────────────────────────────────────
+
 @Composable
 fun RebasePlanningList(plan: List<RebaseStep>, upstream: String, viewModel: RebaseViewModel) {
     var localLoading by remember { mutableStateOf(false) }
+    var rewordTarget by remember { mutableStateOf<RebaseStep?>(null) }
+
+    if (rewordTarget != null) {
+        RewordDialog(
+            step = rewordTarget!!,
+            onDismiss = { rewordTarget = null },
+            onConfirm = { newMsg ->
+                viewModel.updateRewordMessage(rewordTarget!!.sha, newMsg)
+                rewordTarget = null
+            }
+        )
+    }
 
     Column(Modifier.fillMaxSize()) {
-        Surface(color = Color(0xFF1A1A2E), modifier = Modifier.fillMaxWidth()) {
-            Text(
-                text = "Rebasing onto: $upstream",
-                modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp),
-                color = Color(0xFF90CAF9),
-                fontSize = 13.sp,
-                fontWeight = FontWeight.Bold
-            )
+        Surface(
+            color = Color(0xFF1E1E2C),
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Column(Modifier.padding(16.dp)) {
+                Text(
+                    text = "REBASING ONTO: $upstream",
+                    color = Color(0xFF64FFDA),
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.Bold,
+                    letterSpacing = 1.sp
+                )
+                Spacer(Modifier.height(4.dp))
+                Text(
+                    text = "${plan.size} commits will be re-applied. You can reorder them or change actions.",
+                    color = Color.Gray,
+                    fontSize = 12.sp
+                )
+            }
         }
 
-        LazyColumn(Modifier.weight(1f)) {
-            items(plan) { step ->
-                RebaseStepItem(step) { action ->
-                    viewModel.updateAction(step.sha, action)
-                }
-                HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), color = Color(0xFF222222))
+        RebaseHelperHeader()
+
+        LazyColumn(
+            modifier = Modifier.weight(1f).fillMaxWidth(),
+            contentPadding = PaddingValues(bottom = 16.dp)
+        ) {
+            itemsIndexed(plan) { index, step ->
+                RebaseStepItem(
+                    step = step,
+                    index = index,
+                    isFirst = index == 0,
+                    isLast = index == plan.size - 1,
+                    onActionChange = { viewModel.updateAction(step.sha, it) },
+                    onReword = { rewordTarget = step },
+                    onMoveUp = { viewModel.moveStep(index, index - 1) },
+                    onMoveDown = { viewModel.moveStep(index, index + 1) }
+                )
             }
         }
 
         Surface(
-            tonalElevation = 8.dp, 
-            color = Color(0xFF1E1E1E),
+            tonalElevation = 12.dp,
+            color = Color(0xFF1A1A1A),
             modifier = Modifier.fillMaxWidth()
         ) {
-            Button(
-                onClick = { 
-                    localLoading = true
-                    viewModel.executeRebase() 
-                },
-                enabled = !localLoading,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(16.dp)
-                    .height(56.dp),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = Color(0xFF2196F3),
-                    disabledContainerColor = Color(0xFF1565C0)
-                ),
-                shape = MaterialTheme.shapes.medium
+            Row(
+                Modifier.padding(16.dp).fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                if (localLoading) {
-                    CircularProgressIndicator(color = Color.White, modifier = Modifier.size(24.dp), strokeWidth = 2.dp)
-                } else {
-                    Icon(Icons.Default.PlayArrow, null)
-                    Spacer(Modifier.width(8.dp))
-                    Text("Execute Rebase Plan (${plan.size} commits)", fontWeight = FontWeight.Bold)
+                OutlinedButton(
+                    onClick = { viewModel.abortRebase() },
+                    modifier = Modifier.weight(1f).height(56.dp),
+                    colors = ButtonDefaults.outlinedButtonColors(contentColor = Color(0xFFFF5252)),
+                    border = BorderStroke(1.dp, Color(0xFFFF5252).copy(alpha = 0.5f))
+                ) {
+                    Text("Cancel", fontWeight = FontWeight.Bold)
+                }
+
+                Button(
+                    onClick = {
+                        localLoading = true
+                        viewModel.executeRebase()
+                    },
+                    enabled = !localLoading,
+                    modifier = Modifier.weight(2f).height(56.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2196F3)),
+                    shape = MaterialTheme.shapes.medium
+                ) {
+                    if (localLoading) {
+                        CircularProgressIndicator(color = Color.White, modifier = Modifier.size(24.dp))
+                    } else {
+                        Icon(Icons.Default.PlayArrow, null)
+                        Spacer(Modifier.width(8.dp))
+                        Text("Start Rebase", fontWeight = FontWeight.ExtraBold, fontSize = 16.sp)
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun RebaseHelperHeader() {
+    var expanded by remember { mutableStateOf(false) }
+    
+    Surface(
+        color = Color(0xFF252525),
+        modifier = Modifier.fillMaxWidth().clickable { expanded = !expanded }
+    ) {
+        Column(Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(Icons.Default.Info, null, tint = Color.Gray, modifier = Modifier.size(16.dp))
+                Spacer(Modifier.width(8.dp))
+                Text("Command Legend", color = Color.LightGray, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                Spacer(Modifier.weight(1f))
+                Icon(
+                    if (expanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
+                    null, tint = Color.Gray
+                )
+            }
+            
+            if (expanded) {
+                Spacer(Modifier.height(8.dp))
+                RebaseAction.values().forEach { action ->
+                    Row(Modifier.padding(vertical = 4.dp)) {
+                        Text(
+                            action.name.padEnd(8),
+                            color = getActionColor(action),
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Bold,
+                            fontFamily = FontFamily.Monospace,
+                            modifier = Modifier.width(60.dp)
+                        )
+                        Text(action.helper, color = Color.Gray, fontSize = 11.sp)
+                    }
                 }
             }
         }
@@ -301,56 +385,170 @@ fun RebasePlanningList(plan: List<RebaseStep>, upstream: String, viewModel: Reba
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun RebaseStepItem(step: RebaseStep, onActionChange: (RebaseAction) -> Unit) {
-    var expanded by remember { mutableStateOf(false) }
+fun RebaseStepItem(
+    step: RebaseStep,
+    index: Int,
+    isFirst: Boolean,
+    isLast: Boolean,
+    onActionChange: (RebaseAction) -> Unit,
+    onReword: () -> Unit,
+    onMoveUp: () -> Unit,
+    onMoveDown: () -> Unit
+) {
+    var menuExpanded by remember { mutableStateOf(false) }
 
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 20.dp),
-        verticalAlignment = Alignment.CenterVertically
+    Card(
+        modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp).fillMaxWidth(),
+        colors = CardDefaults.cardColors(containerColor = Color(0xFF2A2A2A)),
+        border = BorderStroke(0.5.dp, Color.White.copy(alpha = 0.1f))
     ) {
-        Column(Modifier.weight(1f)) {
-            Text(step.sha.take(8), color = Color(0xFF64FFDA), fontSize = 11.sp, fontFamily = FontFamily.Monospace)
-            Spacer(Modifier.height(2.dp))
-            Text(step.originalMessage, color = Color.White, fontWeight = FontWeight.Medium, fontSize = 15.sp)
-        }
-
-        Box {
-            Surface(
-                onClick = { expanded = true },
-                color = when(step.action) {
-                    RebaseAction.PICK   -> Color(0xFF1B5E20)
-                    RebaseAction.DROP   -> Color(0xFFB71C1C)
-                    else                -> Color(0xFFE65100)
-                },
-                shape = MaterialTheme.shapes.small
-            ) {
-                Text(
-                    step.action.name, 
-                    color = Color.White, 
-                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
-                    fontSize = 12.sp,
-                    fontWeight = FontWeight.Bold
-                )
+        Row(
+            modifier = Modifier.padding(12.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.width(32.dp)) {
+                IconButton(onClick = onMoveUp, enabled = !isFirst, modifier = Modifier.size(24.dp)) {
+                    Icon(Icons.Default.KeyboardArrowUp, null, tint = if (isFirst) Color.DarkGray else Color.Gray)
+                }
+                Text("${index + 1}", color = Color.Gray, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                IconButton(onClick = onMoveDown, enabled = !isLast, modifier = Modifier.size(24.dp)) {
+                    Icon(Icons.Default.KeyboardArrowDown, null, tint = if (isLast) Color.DarkGray else Color.Gray)
+                }
             }
-            DropdownMenu(
-                expanded = expanded, 
-                onDismissRequest = { expanded = false },
-                modifier = Modifier.background(Color(0xFF2A2A2A))
-            ) {
-                RebaseAction.values().forEach { action ->
-                    DropdownMenuItem(
-                        text = { Text(action.name, color = Color.White) },
-                        onClick = {
-                            onActionChange(action)
-                            expanded = false
-                        }
+
+            Spacer(Modifier.width(8.dp))
+
+            Column(Modifier.weight(1f)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Surface(
+                        color = Color.Black.copy(alpha = 0.3f),
+                        shape = RoundedCornerShape(4.dp)
+                    ) {
+                        Text(
+                            step.sha.take(7),
+                            color = Color(0xFF64FFDA),
+                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                            fontSize = 10.sp,
+                            fontFamily = FontFamily.Monospace
+                        )
+                    }
+                    if (step.newMessage != null) {
+                        Spacer(Modifier.width(8.dp))
+                        Icon(Icons.Default.Edit, null, tint = Color(0xFF64FFDA), modifier = Modifier.size(12.dp))
+                        Text(" Modified", color = Color(0xFF64FFDA), fontSize = 10.sp)
+                    }
+                }
+                
+                Spacer(Modifier.height(4.dp))
+                
+                Text(
+                    text = step.newMessage ?: step.originalMessage,
+                    color = Color.White,
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.Medium,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis
+                )
+                
+                if (step.action == RebaseAction.SQUASH || step.action == RebaseAction.FIXUP) {
+                    Text(
+                        "Melding into previous commit ↑",
+                        color = Color(0xFFFFB74D),
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold
                     )
+                }
+            }
+
+            Spacer(Modifier.width(8.dp))
+
+            Box {
+                Surface(
+                    onClick = { menuExpanded = true },
+                    color = getActionColor(step.action).copy(alpha = 0.15f),
+                    shape = RoundedCornerShape(8.dp),
+                    border = BorderStroke(1.dp, getActionColor(step.action).copy(alpha = 0.4f))
+                ) {
+                    Row(
+                        Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            step.action.name,
+                            color = getActionColor(step.action),
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Black
+                        )
+                        Icon(Icons.Default.ArrowDropDown, null, tint = getActionColor(step.action), modifier = Modifier.size(16.dp))
+                    }
+                }
+
+                DropdownMenu(
+                    expanded = menuExpanded,
+                    onDismissRequest = { menuExpanded = false },
+                    modifier = Modifier.background(Color(0xFF333333))
+                ) {
+                    RebaseAction.values().forEach { action ->
+                        DropdownMenuItem(
+                            text = {
+                                Column {
+                                    Text(action.name, color = getActionColor(action), fontWeight = FontWeight.Bold)
+                                    Text(action.description, color = Color.Gray, fontSize = 11.sp)
+                                }
+                            },
+                            onClick = {
+                                onActionChange(action)
+                                menuExpanded = false
+                                if (action == RebaseAction.REWORD) onReword()
+                            }
+                        )
+                    }
                 }
             }
         }
     }
+}
+
+@Composable
+fun RewordDialog(step: RebaseStep, onDismiss: () -> Unit, onConfirm: (String) -> Unit) {
+    var text by remember { mutableStateOf(step.newMessage ?: step.originalMessage) }
+    
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        containerColor = Color(0xFF252525),
+        title = { Text("Edit Commit Message", color = Color.White) },
+        text = {
+            Column {
+                Text("Original: ${step.originalMessage}", color = Color.Gray, fontSize = 12.sp)
+                Spacer(Modifier.height(12.dp))
+                OutlinedTextField(
+                    value = text,
+                    onValueChange = { text = it },
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedTextColor = Color.White,
+                        unfocusedTextColor = Color.White,
+                        focusedBorderColor = Color(0xFF64FFDA)
+                    )
+                )
+            }
+        },
+        confirmButton = {
+            Button(onClick = { onConfirm(text) }) { Text("Save") }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text("Cancel", color = Color.Gray) }
+        }
+    )
+}
+
+private fun getActionColor(action: RebaseAction): Color = when (action) {
+    RebaseAction.PICK   -> Color(0xFF4CAF50)
+    RebaseAction.REWORD -> Color(0xFF2196F3)
+    RebaseAction.EDIT   -> Color(0xFF00BCD4)
+    RebaseAction.SQUASH -> Color(0xFFFF9800)
+    RebaseAction.FIXUP  -> Color(0xFFFFC107)
+    RebaseAction.DROP   -> Color(0xFFF44336)
 }
 
 @Composable
