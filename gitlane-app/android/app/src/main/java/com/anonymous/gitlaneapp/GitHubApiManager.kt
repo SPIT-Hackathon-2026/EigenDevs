@@ -128,6 +128,27 @@ class GitHubApiManager(private val token: String) {
     }
 
     /**
+     * Removes a collaborator from a repository.
+     * DELETE /repos/{owner}/{repo}/collaborators/{username}
+     */
+    suspend fun removeCollaborator(repoFullName: String, username: String): Boolean = withContext(Dispatchers.IO) {
+        val url = URL("https://api.github.com/repos/$repoFullName/collaborators/$username")
+        val conn = url.openConnection() as HttpURLConnection
+        conn.requestMethod = "DELETE"
+        conn.connectTimeout = 8000
+        conn.readTimeout = 8000
+        conn.setRequestProperty("Authorization", "token $token")
+        conn.setRequestProperty("Accept", "application/vnd.github.v3+json")
+        conn.setRequestProperty("User-Agent", "GitLane-Android")
+
+        // 204 = success, 403 = no permission
+        if (conn.responseCode == 403) {
+            throw Exception("You don't have permission to remove collaborators from this repository.")
+        }
+        conn.responseCode in 200..204
+    }
+
+    /**
      * Lists current repository invitations for the authenticated user.
      */
     suspend fun listInvitations(): List<InvitationInfo> = withContext(Dispatchers.IO) {

@@ -7,7 +7,14 @@
     android:orientation="vertical"
     android:background="#000000">
 
-    <!-- ── Sticky Header ───────────────────────────────────────────────── -->
+    <!-- ── Rebase Banner (From Remote) ────────────────────────────────── -->
+    <androidx.compose.ui.platform.ComposeView
+        android:id="@+id/rebaseBannerView"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:visibility="gone" />
+
+    <!-- ── Sticky Header (Merged) ───────────────────────────────────────── -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
@@ -16,7 +23,6 @@
         android:paddingTop="20dp"
         android:paddingBottom="12dp">
 
-        <!-- Back row -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -43,6 +49,21 @@
                 android:textColor="#475569"
                 android:singleLine="true"
                 android:ellipsize="start"/>
+
+            <!-- ✦ Copilot Button (Minimal version for Header) -->
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnCopilot"
+                android:layout_width="wrap_content"
+                android:layout_height="32dp"
+                android:text="✦ Copilot"
+                android:textSize="10sp"
+                android:textColor="#FFFFFF"
+                app:backgroundTint="#6C63FF"
+                app:cornerRadius="16dp"
+                android:insetTop="0dp"
+                android:insetBottom="0dp"
+                android:paddingHorizontal="12dp"
+                style="@style/Widget.Material3.Button.UnelevatedButton"/>
         </LinearLayout>
 
         <!-- Repo name line -->
@@ -173,31 +194,64 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Team Members"
-                    android:textSize="12sp"
+                    android:text="TEAM MEMBERS"
+                    android:textSize="10sp"
                     android:textStyle="bold"
                     android:textColor="#64748B"
-                    android:letterSpacing="0.08"
-                    android:layout_marginBottom="6dp"/>
+                    android:letterSpacing="0.12"
+                    android:layout_marginBottom="8dp"/>
 
                 <com.google.android.material.card.MaterialCardView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    app:cardCornerRadius="8dp"
+                    app:cardCornerRadius="12dp"
                     app:cardElevation="0dp"
                     app:strokeWidth="1dp"
                     app:strokeColor="#1E293B"
                     app:cardBackgroundColor="#0A0F1E">
 
-                    <TextView
-                        android:id="@+id/tvCollaboratorList"
+                    <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:padding="12dp"
-                        android:text="Loading…"
-                        android:textSize="12sp"
-                        android:lineSpacingExtra="4dp"
-                        android:textColor="#94A3B8"/>
+                        android:orientation="vertical"
+                        android:padding="12dp">
+
+                        <!-- Error state -->
+                        <TextView
+                            android:id="@+id/tvCollaboratorError"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:padding="8dp"
+                            android:textSize="11sp"
+                            android:textColor="#FF8A80"
+                            android:background="#22FF5252"
+                            android:visibility="gone"
+                            android:layout_marginBottom="8dp" />
+
+                        <!-- Loading text -->
+                        <TextView
+                            android:id="@+id/tvCollaboratorLoading"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="⏳ Loading members..."
+                            android:textSize="12sp"
+                            android:textColor="#64748B"
+                            android:layout_marginBottom="6dp" />
+
+                        <!-- Per-collaborator row container -->
+                        <LinearLayout
+                            android:id="@+id/llCollaboratorRows"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="vertical" />
+
+                        <!-- Legacy compatibility -->
+                        <TextView
+                            android:id="@+id/tvCollaboratorList"
+                            android:layout_width="0dp"
+                            android:layout_height="0dp"
+                            android:visibility="gone" />
+                    </LinearLayout>
                 </com.google.android.material.card.MaterialCardView>
             </LinearLayout>
 

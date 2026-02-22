@@ -117,6 +117,18 @@
             android:name=".ui.PublicRepoSearchActivity"
             android:label="GitHub Discovery" />
 
+        <activity
+            android:name=".ui.RebaseActivity"
+            android:label="Interactive Rebase"
+            android:theme="@style/Theme.GitLane" />
+
+        <activity
+            android:name=".ui.CopilotActivity"
+            android:label="GitLane Copilot"
+            android:windowSoftInputMode="adjustResize"
+            android:theme="@style/Theme.GitLane" />
+
+
         <!-- ZXing Scanner -->
         <activity
             android:name="com.journeyapps.barcodescanner.CaptureActivity"

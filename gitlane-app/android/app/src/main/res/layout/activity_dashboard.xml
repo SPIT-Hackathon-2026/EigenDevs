@@ -6,8 +6,166 @@
     android:layout_height="match_parent"
     android:background="@color/bg_primary">
 
+<<<<<<< HEAD
     <androidx.fragment.app.FragmentContainerView
         android:id="@+id/nav_host_fragment"
+=======
+<LinearLayout
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:background="@color/bg_primary">
+
+    <androidx.compose.ui.platform.ComposeView
+        android:id="@+id/rebaseBannerView"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:visibility="gone" />
+
+    <!-- Header card -->
+    <com.google.android.material.card.MaterialCardView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_margin="16dp"
+        app:cardCornerRadius="16dp"
+        app:cardElevation="4dp"
+        app:cardBackgroundColor="@color/surface">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:padding="20dp">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:layout_marginBottom="16dp">
+
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_weight="1"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical">
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="🚀 GitLane"
+                        android:textSize="28sp"
+                        android:textStyle="bold"
+                        android:textColor="@color/text_primary" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Offline Git Client"
+                        android:textSize="14sp"
+                        android:textColor="@color/text_secondary" />
+                </LinearLayout>
+
+                <ImageButton
+                    android:id="@+id/btnInbox"
+                    android:layout_width="48dp"
+                    android:layout_height="48dp"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:contentDescription="Inbox"
+                    android:src="@android:drawable/ic_dialog_email"
+                    android:layout_marginEnd="8dp"
+                    app:tint="@color/accent" />
+
+                <ImageButton
+                    android:id="@+id/btnSettings"
+                    android:layout_width="48dp"
+                    android:layout_height="48dp"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:contentDescription="Settings"
+                    android:src="@android:drawable/ic_menu_preferences"
+                    app:tint="@color/text_secondary" />
+            </LinearLayout>
+
+            <com.google.android.material.textfield.TextInputLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:hint="Repository name"
+                style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
+                app:boxStrokeColor="@color/accent"
+                android:layout_marginBottom="12dp">
+
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/etRepoName"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:inputType="text"
+                    android:singleLine="true"
+                    android:textColor="@color/text_primary" />
+            </com.google.android.material.textfield.TextInputLayout>
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:layout_marginBottom="8dp">
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnCreateRepo"
+                    android:layout_width="0dp"
+                    android:layout_weight="1"
+                    android:layout_height="wrap_content"
+                    android:text="Create"
+                    android:layout_marginEnd="8dp"
+                    app:backgroundTint="@color/accent"
+                    app:cornerRadius="10dp" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnGoToClone"
+                    android:layout_width="0dp"
+                    android:layout_weight="1"
+                    android:layout_height="wrap_content"
+                    android:text="Clone"
+                    style="@style/Widget.Material3.Button.OutlinedButton"
+                    app:strokeColor="@color/accent"
+                    android:textColor="@color/accent"
+                    app:cornerRadius="10dp" />
+            </LinearLayout>
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnFetchGithub"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="🌐 Fetch My Repos"
+                style="@style/Widget.Material3.Button.TextButton"
+                android:textColor="@color/text_primary"
+                android:textAllCaps="false" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnSearchPublic"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="🔍 Search GitHub"
+                style="@style/Widget.Material3.Button.TextButton"
+                android:textColor="@color/accent"
+                android:textAllCaps="false" />
+        </LinearLayout>
+    </com.google.android.material.card.MaterialCardView>
+
+    <!-- Repo list header -->
+    <TextView
+        android:id="@+id/tvRepoCount"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Repositories"
+        android:textSize="17sp"
+        android:textStyle="bold"
+        android:textColor="@color/text_primary"
+        android:layout_marginStart="16dp"
+        android:layout_marginBottom="8dp" />
+
+    <!-- Repo list -->
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/rvRepos"
+>>>>>>> 94b59930ce74a586ccfcc14c7822cf331c59c8dc
         android:layout_width="match_parent"
         android:layout_height="0dp"
         app:layout_constraintTop_toTopOf="parent"
@@ -25,4 +183,34 @@
         app:labelVisibilityMode="labeled"
         app:elevation="0dp" />
 
+<<<<<<< HEAD
 </androidx.constraintlayout.widget.ConstraintLayout>
+=======
+    <!-- 📷 Scan QR FAB — bottom right -->
+    <com.google.android.material.floatingactionbutton.FloatingActionButton
+        android:id="@+id/fabScanQr"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="bottom|end"
+        android:layout_margin="20dp"
+        android:contentDescription="Scan QR to import repo"
+        app:backgroundTint="@color/accent"
+        app:tint="@android:color/white"
+        app:srcCompat="@android:drawable/ic_menu_camera" />
+
+    <!-- ✦ Copilot FAB — bottom left -->
+    <com.google.android.material.floatingactionbutton.ExtendedFloatingActionButton
+        android:id="@+id/fabCopilot"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="bottom|start"
+        android:layout_margin="20dp"
+        android:text="✦ Copilot"
+        android:textColor="@android:color/white"
+        app:backgroundTint="#6C63FF"
+        app:icon="@android:drawable/ic_menu_help"
+        app:iconTint="@android:color/white"
+        android:contentDescription="Open AI Copilot" />
+
+</androidx.coordinatorlayout.widget.CoordinatorLayout>
+>>>>>>> 94b59930ce74a586ccfcc14c7822cf331c59c8dc
