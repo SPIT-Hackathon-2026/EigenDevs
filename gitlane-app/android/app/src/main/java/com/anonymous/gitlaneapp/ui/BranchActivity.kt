@@ -54,7 +54,8 @@ class BranchActivity : AppCompatActivity() {
             onCheckout = { branch -> checkoutBranch(branch) },
             onDelete   = { branch -> confirmDelete(branch) },
             onRename   = { branch -> showRenameDialog(branch) },
-            onMerge    = { branch -> confirmMerge(branch) }
+            onMerge    = { branch -> confirmMerge(branch) },
+            onRebase   = { branch -> startRebase(branch) }
         )
 
         findViewById<RecyclerView>(R.id.rvBranches).apply {
@@ -256,6 +257,15 @@ class BranchActivity : AppCompatActivity() {
             }
         }
     }
+
+    private fun startRebase(branch: BranchInfo) {
+        if (branch.isCurrent) return
+        val intent = android.content.Intent(this, RebaseActivity::class.java).apply {
+            putExtra(RebaseActivity.EXTRA_REPO_PATH, repoDir.absolutePath)
+            putExtra(RebaseActivity.EXTRA_UPSTREAM, branch.name)
+        }
+        startActivity(intent)
+    }
 }
 
 // ── Adapter ──────────────────────────────────────────────────────────────────
@@ -264,7 +274,8 @@ class BranchAdapter(
     private val onCheckout: (BranchInfo) -> Unit,
     private val onDelete:   (BranchInfo) -> Unit,
     private val onRename:   (BranchInfo) -> Unit,
-    private val onMerge:    (BranchInfo) -> Unit
+    private val onMerge:    (BranchInfo) -> Unit,
+    private val onRebase:   (BranchInfo) -> Unit
 ) : RecyclerView.Adapter<BranchAdapter.VH>() {
 
     private var items = listOf<BranchInfo>()
@@ -277,6 +288,7 @@ class BranchAdapter(
         val btnCheck:   Button   = v.findViewById(R.id.btnCheckout)
         val btnRename:  Button   = v.findViewById(R.id.btnRenameBranch)
         val btnMerge:   Button   = v.findViewById(R.id.btnMergeBranch)
+        val btnRebase:  Button   = v.findViewById(R.id.btnRebaseBranch)
         val btnDelete:  Button   = v.findViewById(R.id.btnDeleteBranch)
     }
 
@@ -295,8 +307,10 @@ class BranchAdapter(
         holder.btnCheck.setOnClickListener  { onCheckout(b) }
         holder.btnRename.setOnClickListener { onRename(b) }
         holder.btnMerge.setOnClickListener  { onMerge(b) }
+        holder.btnRebase.setOnClickListener { onRebase(b) }
         holder.btnDelete.setOnClickListener { onDelete(b) }
         
         holder.btnMerge.visibility = if (b.isCurrent) View.GONE else View.VISIBLE
+        holder.btnRebase.visibility = if (b.isCurrent) View.GONE else View.VISIBLE
     }
 }

@@ -11,7 +11,11 @@ import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.anonymous.gitlaneapp.GitManager
 import com.anonymous.gitlaneapp.databinding.ActivityDashboardBinding
+import com.anonymous.gitlaneapp.ui.components.RebaseBanner
 import com.anonymous.gitlaneapp.ui.adapter.RepoAdapter
+import androidx.compose.ui.platform.ComposeView
+import androidx.compose.ui.platform.ViewCompositionStrategy
+import org.eclipse.jgit.lib.RepositoryState
 import kotlinx.coroutines.launch
 import java.io.File
 
@@ -49,9 +53,84 @@ class DashboardActivity : AppCompatActivity() {
         setupSettingsButton()
         setupInboxButton()
         setupScanFab()
+        setupCopilotFab()
         loadRepos()
 
         checkFirstRun()
+        setupRebaseBanner()
+    }
+
+    override fun onResume() {
+        super.onResume()
+        loadRepos()
+        checkRebaseState()
+    }
+
+    private fun setupCopilotFab() {
+        binding.fabCopilot.setOnClickListener {
+            startActivity(Intent(this, CopilotActivity::class.java))
+        }
+    }
+
+    private fun setupRebaseBanner() {
+        binding.rebaseBannerView.apply {
+            setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed)
+        }
+    }
+
+    private fun checkRebaseState() {
+        lifecycleScope.launch {
+            val repos = git.listRepos()
+            var rebasingRepo: File? = null
+            for (repo in repos) {
+                if (git.getRepositoryState(repo) == RepositoryState.REBASING_INTERACTIVE) {
+                    rebasingRepo = repo
+                    break
+                }
+            }
+
+            if (rebasingRepo != null) {
+                val targetRepo = rebasingRepo // capture for lambdas
+                binding.rebaseBannerView.visibility = View.VISIBLE
+                binding.rebaseBannerView.setContent {
+                    RebaseBanner(
+                        onResume = {
+                            val intent = Intent(this@DashboardActivity, RebaseActivity::class.java).apply {
+                                putExtra(RebaseActivity.EXTRA_REPO_PATH, targetRepo.absolutePath)
+                                putExtra(RebaseActivity.EXTRA_UPSTREAM, "") // Will load from persistence
+                            }
+                            startActivity(intent)
+                        },
+                        onAbort = {
+                            lifecycleScope.launch {
+                                try {
+                                    kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                                        git.abortRebase(targetRepo)
+                                        // Delete GitLane persistence state file
+                                        File(targetRepo, ".git/gitlane/rebase_state.json").delete()
+                                    }
+                                    Toast.makeText(
+                                        this@DashboardActivity,
+                                        "✅ Rebase aborted for '${targetRepo.name}'",
+                                        Toast.LENGTH_SHORT
+                                    ).show()
+                                } catch (e: Exception) {
+                                    Toast.makeText(
+                                        this@DashboardActivity,
+                                        "❌ Abort failed: ${e.message}",
+                                        Toast.LENGTH_LONG
+                                    ).show()
+                                } finally {
+                                    binding.rebaseBannerView.visibility = View.GONE
+                                }
+                            }
+                        }
+                    )
+                }
+            } else {
+                binding.rebaseBannerView.visibility = View.GONE
+            }
+        }
     }
 
     private fun setupInboxButton() {
@@ -99,10 +178,6 @@ class DashboardActivity : AppCompatActivity() {
         }
     }
 
-    override fun onResume() {
-        super.onResume()
-        loadRepos()
-    }
 
     private fun setupRecyclerView() {
         adapter = RepoAdapter(

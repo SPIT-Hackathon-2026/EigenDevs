@@ -12,6 +12,12 @@
     android:orientation="vertical"
     android:background="@color/bg_primary">
 
+    <androidx.compose.ui.platform.ComposeView
+        android:id="@+id/rebaseBannerView"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:visibility="gone" />
+
     <!-- Header card -->
     <com.google.android.material.card.MaterialCardView
         android:layout_width="match_parent"
@@ -174,5 +180,19 @@
         app:backgroundTint="@color/accent"
         app:tint="@android:color/white"
         app:srcCompat="@android:drawable/ic_menu_camera" />
+
+    <!-- ✦ Copilot FAB — bottom left -->
+    <com.google.android.material.floatingactionbutton.ExtendedFloatingActionButton
+        android:id="@+id/fabCopilot"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="bottom|start"
+        android:layout_margin="20dp"
+        android:text="✦ Copilot"
+        android:textColor="@android:color/white"
+        app:backgroundTint="#6C63FF"
+        app:icon="@android:drawable/ic_menu_help"
+        app:iconTint="@android:color/white"
+        android:contentDescription="Open AI Copilot" />
 
 </androidx.coordinatorlayout.widget.CoordinatorLayout>

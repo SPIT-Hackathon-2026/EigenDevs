@@ -13,6 +13,7 @@ import org.eclipse.jgit.internal.storage.file.GC
 import org.eclipse.jgit.lib.BranchTrackingStatus
 import org.eclipse.jgit.lib.PersonIdent
 import org.eclipse.jgit.lib.Repository
+import org.eclipse.jgit.lib.RepositoryState
 import org.eclipse.jgit.revwalk.RevWalk
 import org.eclipse.jgit.storage.file.FileRepositoryBuilder
 import org.eclipse.jgit.storage.pack.PackConfig
@@ -20,6 +21,11 @@ import org.eclipse.jgit.transport.RefSpec
 import org.eclipse.jgit.transport.RemoteConfig
 import org.eclipse.jgit.transport.URIish
 import org.eclipse.jgit.transport.UsernamePasswordCredentialsProvider
+import org.eclipse.jgit.diff.DiffFormatter
+import org.eclipse.jgit.diff.RawTextComparator
+import org.eclipse.jgit.treewalk.EmptyTreeIterator
+import org.eclipse.jgit.treewalk.CanonicalTreeParser
+import java.io.ByteArrayOutputStream
 import java.io.File
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -166,6 +172,15 @@ class GitManager(context: Context) {
         } catch (e: Exception) { GitStatus() }
     }
 
+    /**
+     * Returns the current state of the repository (e.g., SAFE, MERGING, REBASING).
+     */
+    suspend fun getRepositoryState(repoDir: File): RepositoryState = withContext(Dispatchers.IO) {
+        try {
+            openRepo(repoDir).use { it.repositoryState }
+        } catch (e: Exception) { RepositoryState.SAFE }
+    }
+
     // ═══════════════════════════════════════════════════════════════════════════
     // BRANCH MANAGEMENT
     // ═══════════════════════════════════════════════════════════════════════════
@@ -294,10 +309,11 @@ class GitManager(context: Context) {
     suspend fun listTags(repoDir: File): List<TagInfo> = withContext(Dispatchers.IO) {
         try {
             openGit(repoDir).use { git ->
-                git.tagList().call().map { ref ->
+                git.tagList().call().mapNotNull { ref ->
                     val name = ref.name.removePrefix("refs/tags/")
                     val walk = RevWalk(git.repository)
-                    val commit = walk.parseCommit(ref.objectId)
+                    val targetId = ref.objectId ?: return@mapNotNull null
+                    val commit = try { walk.parseCommit(targetId) } catch (e: Exception) { null } ?: return@mapNotNull null
                     TagInfo(
                         name = name,
                         sha = commit.abbreviate(8).name(),
@@ -479,6 +495,18 @@ class GitManager(context: Context) {
     }
 
     /**
+     * Abort an in-progress interactive rebase (equivalent to `git rebase --abort`).
+     * Resets HEAD back to the pre-rebase position.
+     */
+    suspend fun abortRebase(repoDir: File) = withContext(Dispatchers.IO) {
+        openGit(repoDir).use { git ->
+            git.rebase()
+                .setOperation(org.eclipse.jgit.api.RebaseCommand.Operation.ABORT)
+                .call()
+        }
+    }
+
+    /**
      * Get the content of a file at a specific stage in the index.
      * Stage 1: Base (Common Ancestor)
      * Stage 2: Ours (HEAD)
@@ -489,7 +517,8 @@ class GitManager(context: Context) {
             openRepo(repoDir).use { repo ->
                 // JGit's DirCache doesn't make it super easy to get specific stage content directly by stage int
                 val dc = repo.readDirCache()
-                val entry = dc.getEntry(path) ?: return@withContext null
+                // Quick null-guard: if path isn't in the index at all, bail early
+                dc.getEntry(path) ?: return@withContext null
                 
                 // JGit's DirCache doesn't make it super easy to get specific stage content directly by stage int
                 // We need to find the DirCacheEntry with the correct stage
@@ -560,6 +589,43 @@ class GitManager(context: Context) {
             .build()
 
     private fun openGit(dir: File): Git = Git(openRepo(dir))
+
+    /** Return a formatted diff for a specific commit (diff vs first parent). */
+    suspend fun getDiff(repoDir: File, sha: String): String = withContext(Dispatchers.IO) {
+        try {
+            openGit(repoDir).use { g ->
+                val repository = g.repository
+                val commitId = repository.resolve(sha) ?: return@withContext "Commit not found"
+                val walk = RevWalk(repository)
+                val commit = walk.parseCommit(commitId)
+                val parent = if (commit.parentCount > 0) walk.parseCommit(commit.getParent(0).id) else null
+
+                val out = ByteArrayOutputStream()
+                val df = DiffFormatter(out)
+                df.setRepository(repository)
+                df.setDiffComparator(RawTextComparator.DEFAULT)
+                df.isDetectRenames = true
+
+                val diffs = if (parent != null) {
+                    df.scan(parent.tree, commit.tree)
+                } else {
+                    val reader = repository.newObjectReader()
+                    df.scan(EmptyTreeIterator(), 
+                            CanonicalTreeParser(null, reader, commit.tree))
+                }
+
+                // Format up to 20 files to keep prompt length sane
+                for (ent in diffs.take(20)) {
+                    df.format(ent)
+                }
+                df.flush()
+                val res = out.toString()
+                if (res.length > 5000) res.take(5000) + "\n... (truncated)" else res
+            }
+        } catch (e: Exception) {
+            "Diff error: ${e.message}"
+        }
+    }
 }
 
 // ── Data classes ─────────────────────────────────────────────────────────────

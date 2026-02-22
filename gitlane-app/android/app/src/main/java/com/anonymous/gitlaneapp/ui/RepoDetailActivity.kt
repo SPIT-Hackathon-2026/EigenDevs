@@ -11,6 +11,10 @@ import com.anonymous.gitlaneapp.GitManager
 import com.anonymous.gitlaneapp.R
 import com.anonymous.gitlaneapp.databinding.ActivityRepoDetailBinding
 import com.anonymous.gitlaneapp.ui.adapter.FileAdapter
+import com.anonymous.gitlaneapp.ui.components.RebaseBanner
+import androidx.compose.ui.platform.ComposeView
+import androidx.compose.ui.platform.ViewCompositionStrategy
+import org.eclipse.jgit.lib.RepositoryState
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -50,12 +54,68 @@ class RepoDetailActivity : AppCompatActivity() {
 
         setupRecyclerView()
         setupButtons()
+        setupRebaseBanner()
         loadRepoInfo()
+    }
+
+    private fun setupRebaseBanner() {
+        binding.rebaseBannerView.apply {
+            setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed)
+        }
     }
 
     override fun onResume() {
         super.onResume()
         loadRepoInfo()
+        checkRebaseState()
+    }
+
+    private fun checkRebaseState() {
+        lifecycleScope.launch {
+            val state = withContext(Dispatchers.IO) { git.getRepositoryState(repoDir) }
+            if (state == RepositoryState.REBASING_INTERACTIVE) {
+                binding.rebaseBannerView.visibility = View.VISIBLE
+                binding.rebaseBannerView.setContent {
+                    RebaseBanner(
+                        onResume = {
+                            val intent = Intent(this@RepoDetailActivity, RebaseActivity::class.java).apply {
+                                putExtra(RebaseActivity.EXTRA_REPO_PATH, repoDir.absolutePath)
+                                putExtra(RebaseActivity.EXTRA_UPSTREAM, "")
+                            }
+                            startActivity(intent)
+                        },
+                        onAbort = {
+                            lifecycleScope.launch {
+                                try {
+                                    withContext(Dispatchers.IO) {
+                                        git.abortRebase(repoDir)
+                                        // Also delete the GitLane persistence state file
+                                        val stateFile = File(repoDir, ".git/gitlane/rebase_state.json")
+                                        stateFile.delete()
+                                    }
+                                    android.widget.Toast.makeText(
+                                        this@RepoDetailActivity,
+                                        "✅ Rebase aborted — repo restored to pre-rebase state",
+                                        android.widget.Toast.LENGTH_SHORT
+                                    ).show()
+                                } catch (e: Exception) {
+                                    android.widget.Toast.makeText(
+                                        this@RepoDetailActivity,
+                                        "❌ Abort failed: ${e.message}",
+                                        android.widget.Toast.LENGTH_LONG
+                                    ).show()
+                                } finally {
+                                    binding.rebaseBannerView.visibility = View.GONE
+                                    loadRepoInfo()
+                                }
+                            }
+                        }
+                    )
+                }
+            } else {
+                binding.rebaseBannerView.visibility = View.GONE
+            }
+        }
     }
 
     private val editLauncher = registerForActivityResult(
@@ -119,8 +179,16 @@ class RepoDetailActivity : AppCompatActivity() {
     }
 
     private fun setupButtons() {
+        // ✦ Copilot — opens AI assistant with THIS repo as context
+        binding.btnCopilot.setOnClickListener {
+            startActivity(Intent(this, CopilotActivity::class.java).apply {
+                putExtra(CopilotActivity.EXTRA_REPO_PATH, repoDir.absolutePath)
+            })
+        }
+
         // Create File
         binding.btnCreateFile.setOnClickListener {
+
             val name = binding.etFileName.text.toString().trim()
             val content = binding.etFileContent.text.toString()
             if (name.isEmpty()) {
@@ -390,37 +458,193 @@ class RepoDetailActivity : AppCompatActivity() {
         }
     }
 
+    private var currentRepoFullName: String? = null   // cached for remove calls
+
     private fun fetchCollaborators(remoteUrl: String) {
+        // Reset UI to loading state
+        binding.tvCollaboratorLoading.visibility = View.VISIBLE
+        binding.tvCollaboratorError.visibility = View.GONE
+        binding.llCollaboratorRows.removeAllViews()
+
         lifecycleScope.launch {
             try {
-                val fullName = com.anonymous.gitlaneapp.GitHubApiManager.extractFullName(remoteUrl) ?: return@launch
+                val fullName = com.anonymous.gitlaneapp.GitHubApiManager.extractFullName(remoteUrl)
+                    ?: return@launch
+                currentRepoFullName = fullName
+
                 val creds = com.anonymous.gitlaneapp.CredentialsManager(this@RepoDetailActivity)
-                val token = creds.getPat("github.com") ?: return@launch
-                
+                val token = creds.getPat("github.com") ?: run {
+                    showCollaboratorError("⚠️ No GitHub token — set one in Settings to view members.")
+                    return@launch
+                }
+
                 val api = com.anonymous.gitlaneapp.GitHubApiManager(token)
-                
-                // Try listing collaborators (requires push access)
-                val list = try {
+
+                val list: List<String> = try {
                     api.listCollaborators(fullName)
                 } catch (e: Exception) {
                     if (e.message?.contains("403") == true) {
-                        // Fallback to contributors for public repos where we don't have push access
+                        // No push access — fall back to contributors (public)
                         api.listContributors(fullName)
                     } else {
                         throw e
                     }
                 }
-                
-                binding.tvCollaboratorList.text = if (list.isEmpty()) {
-                    "No members or contributors found"
-                } else {
-                    "Team: " + list.joinToString(", ")
+
+                binding.tvCollaboratorLoading.visibility = View.GONE
+
+                if (list.isEmpty()) {
+                    showCollaboratorError("No collaborators found for this repository.")
+                    return@launch
                 }
+
+                binding.tvCollaboratorError.visibility = View.GONE
+                list.forEach { username -> addCollaboratorRow(username, fullName, api) }
+
             } catch (e: Exception) {
-                binding.tvCollaboratorList.text = "Error fetching: ${e.message}"
+                val msg = when {
+                    e.message?.contains("Unable to resolve host") == true ->
+                        "📡 No internet connection — collaborators cannot be loaded offline."
+                    e.message?.contains("timeout") == true ->
+                        "⏱ Request timed out. Check your connection and try again."
+                    else -> "⚠️ ${e.message}"
+                }
+                showCollaboratorError(msg)
             }
         }
     }
+
+    private fun showCollaboratorError(msg: String) {
+        binding.tvCollaboratorLoading.visibility = View.GONE
+        binding.tvCollaboratorError.text = msg
+        binding.tvCollaboratorError.visibility = View.VISIBLE
+    }
+
+    private fun addCollaboratorRow(
+        username: String,
+        repoFullName: String,
+        api: com.anonymous.gitlaneapp.GitHubApiManager
+    ) {
+        val row = android.widget.LinearLayout(this).apply {
+            orientation = android.widget.LinearLayout.HORIZONTAL
+            val lp = android.widget.LinearLayout.LayoutParams(
+                android.widget.LinearLayout.LayoutParams.MATCH_PARENT,
+                android.widget.LinearLayout.LayoutParams.WRAP_CONTENT
+            ).also { it.bottomMargin = (6 * resources.displayMetrics.density).toInt() }
+            layoutParams = lp
+            setPadding(
+                (12 * resources.displayMetrics.density).toInt(),
+                (10 * resources.displayMetrics.density).toInt(),
+                (12 * resources.displayMetrics.density).toInt(),
+                (10 * resources.displayMetrics.density).toInt()
+            )
+            setBackgroundColor(android.graphics.Color.parseColor("#1A4FC3FF"))
+            // Rounded corners via background drawable
+            background = android.graphics.drawable.GradientDrawable().apply {
+                shape = android.graphics.drawable.GradientDrawable.RECTANGLE
+                cornerRadius = 10 * resources.displayMetrics.density
+                setColor(android.graphics.Color.parseColor("#1A4FC3FF"))
+            }
+        }
+
+        // Avatar circle placeholder
+        val avatar = android.widget.TextView(this).apply {
+            text = username.first().uppercaseChar().toString()
+            textSize = 14f
+            setTextColor(android.graphics.Color.WHITE)
+            gravity = android.view.Gravity.CENTER
+            val size = (36 * resources.displayMetrics.density).toInt()
+            layoutParams = android.widget.LinearLayout.LayoutParams(size, size).also {
+                it.marginEnd = (10 * resources.displayMetrics.density).toInt()
+            }
+            background = android.graphics.drawable.GradientDrawable().apply {
+                shape = android.graphics.drawable.GradientDrawable.OVAL
+                setColor(android.graphics.Color.parseColor("#4FC3F7"))
+            }
+        }
+
+        // Username text
+        val nameView = android.widget.TextView(this).apply {
+            text = "@$username"
+            textSize = 13f
+            setTextColor(android.graphics.Color.WHITE)
+            layoutParams = android.widget.LinearLayout.LayoutParams(
+                0, android.widget.LinearLayout.LayoutParams.WRAP_CONTENT, 1f
+            ).also { it.gravity = android.view.Gravity.CENTER_VERTICAL }
+        }
+
+        // Remove button
+        val removeBtn = android.widget.TextView(this).apply {
+            text = "✕ Remove"
+            textSize = 11f
+            setTextColor(android.graphics.Color.parseColor("#FF5252"))
+            setPadding(
+                (8 * resources.displayMetrics.density).toInt(),
+                (4 * resources.displayMetrics.density).toInt(),
+                (8 * resources.displayMetrics.density).toInt(),
+                (4 * resources.displayMetrics.density).toInt()
+            )
+            background = android.graphics.drawable.GradientDrawable().apply {
+                shape = android.graphics.drawable.GradientDrawable.RECTANGLE
+                cornerRadius = 6 * resources.displayMetrics.density
+                setStroke(
+                    (1 * resources.displayMetrics.density).toInt(),
+                    android.graphics.Color.parseColor("#FF5252")
+                )
+                setColor(android.graphics.Color.TRANSPARENT)
+            }
+            layoutParams = android.widget.LinearLayout.LayoutParams(
+                android.widget.LinearLayout.LayoutParams.WRAP_CONTENT,
+                android.widget.LinearLayout.LayoutParams.WRAP_CONTENT
+            ).also { it.gravity = android.view.Gravity.CENTER_VERTICAL }
+            isClickable = true
+            isFocusable = true
+            setOnClickListener {
+                confirmRemoveCollaborator(username, repoFullName, api, row)
+            }
+        }
+
+        row.addView(avatar)
+        row.addView(nameView)
+        row.addView(removeBtn)
+        binding.llCollaboratorRows.addView(row)
+    }
+
+    private fun confirmRemoveCollaborator(
+        username: String,
+        repoFullName: String,
+        api: com.anonymous.gitlaneapp.GitHubApiManager,
+        row: android.view.View
+    ) {
+        androidx.appcompat.app.AlertDialog.Builder(this)
+            .setTitle("Remove Collaborator?")
+            .setMessage("Remove @$username from $repoFullName?\n\nThey will lose push access immediately.")
+            .setPositiveButton("Remove") { _, _ ->
+                lifecycleScope.launch {
+                    try {
+                        withContext(Dispatchers.IO) { api.removeCollaborator(repoFullName, username) }
+                        binding.llCollaboratorRows.removeView(row)
+                        Toast.makeText(
+                            this@RepoDetailActivity,
+                            "✅ @$username removed from $repoFullName",
+                            Toast.LENGTH_SHORT
+                        ).show()
+                        if (binding.llCollaboratorRows.childCount == 0) {
+                            showCollaboratorError("No collaborators remaining.")
+                        }
+                    } catch (e: Exception) {
+                        Toast.makeText(
+                            this@RepoDetailActivity,
+                            "❌ ${e.message}",
+                            Toast.LENGTH_LONG
+                        ).show()
+                    }
+                }
+            }
+            .setNegativeButton("Cancel", null)
+            .show()
+    }
+
 
     private fun updateStatusUI(status: com.anonymous.gitlaneapp.GitStatus) {
         // Show/Hide Merge Conflict Alert
