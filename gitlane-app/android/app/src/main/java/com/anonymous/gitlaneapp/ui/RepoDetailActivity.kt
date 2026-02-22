@@ -765,8 +765,6 @@ class RepoDetailActivity : AppCompatActivity() {
             .show()
     }
 
-
->>>>>>> 94b59930ce74a586ccfcc14c7822cf331c59c8dc
     private fun updateStatusUI(status: com.anonymous.gitlaneapp.GitStatus) {
         // Show/Hide conflict alert
         binding.cardConflict.visibility = if (status.conflicting.isNotEmpty()) View.VISIBLE else View.GONE

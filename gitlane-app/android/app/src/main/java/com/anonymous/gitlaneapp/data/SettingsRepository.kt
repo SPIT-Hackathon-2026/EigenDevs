@@ -32,6 +32,6 @@ class SettingsRepository(context: Context) {
     }
 
     fun getGroqModel(): String {
-        return standardPrefs.getString("groq_model", "llama3-8b-8192") ?: "llama3-8b-8192"
+        return standardPrefs.getString("groq_model", "llama-3.3-70b-versatile") ?: "llama-3.3-70b-versatile"
     }
 }

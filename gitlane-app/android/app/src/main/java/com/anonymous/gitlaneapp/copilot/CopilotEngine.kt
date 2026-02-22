@@ -148,35 +148,54 @@ class CopilotEngine(private val context: Context) {
         val repoContext  = buildContextBlock(currentRepoDir)
         val systemPrompt = buildSystemPrompt(repoContext, currentRepoDir)
 
-        val messages = mutableListOf(GroqMessage("system", systemPrompt))
-        chatHistory.filter { it.role != "system" }.takeLast(12).forEach { messages.add(it) }
-
-        if (pendingAction != null) {
-            messages.add(
-                GroqMessage(
-                    "system",
-                    "RESUMING ACTION: '$pendingAction'. Params collected so far: $pendingParams. User answered: $userMessage"
-                )
-            )
+        val messages = mutableListOf<GroqMessage>()
+        
+        // Combine system instructions into a single system message
+        val finalSystemPrompt = if (pendingAction != null) {
+            "$systemPrompt\n\n[RESUMING ACTION: '$pendingAction'. Params so far: $pendingParams]"
+        } else {
+            systemPrompt
         }
-        messages.add(GroqMessage("user", userMessage))
+        messages.add(GroqMessage("system", finalSystemPrompt))
+
+        // Get history without system messages
+        val nonSystemHistory = chatHistory.filter { it.role != "system" }
+        
+        // Take last 12, but ensure we start with a 'user' message
+        var lastMessages = nonSystemHistory.takeLast(12)
+        while (lastMessages.isNotEmpty() && lastMessages.first().role != "user") {
+            lastMessages = lastMessages.drop(1)
+        }
+
+        // Add to the request list
+        lastMessages.forEach { messages.add(it) }
+
+        // If for some reason the current userMessage isn't in the list (e.g. empty history), add it
+        if (messages.none { it.role == "user" && it.content == userMessage }) {
+            messages.add(GroqMessage("user", userMessage))
+        }
 
         val raw = try {
-            groq.getCompletion(
+            val response = groq.getCompletion(
                 auth    = "Bearer $apiKey",
                 request = GroqRequest(
                     model       = settings.getGroqModel(),
                     messages    = messages,
                     temperature = 0.2
                 )
-            ).choices.firstOrNull()?.message?.content
+            )
+            response.choices.firstOrNull()?.message?.content
                 ?: return@withContext CopilotResult.Text("No response received from Groq.")
-        } catch (e: Exception) {
-            val msg = e.message ?: e.toString()
+        } catch (e: retrofit2.HttpException) {
+            val errorBody = e.response()?.errorBody()?.string() ?: ""
             return@withContext CopilotResult.ActionDone(
-                "❌ Groq Error: $msg\n\n" +
-                "Note: If DNS failed, try toggling Airplane mode or checking your internet connection. " +
-                "Merge conflict resolution uses the same API, so there is likely a temporary network issue.", 
+                "❌ Groq API Error: ${if (errorBody.contains("model_not_found")) "Model not found" else "Internal Error"}\n\n" +
+                "Check your API key and model settings.",
+                false
+            )
+        } catch (e: Exception) {
+            return@withContext CopilotResult.ActionDone(
+                "❌ Connection failed. Please check your internet connection.",
                 false
             )
         }
