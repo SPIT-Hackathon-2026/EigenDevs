@@ -45,7 +45,6 @@ class DashboardActivity : AppCompatActivity() {
             val fragment: Fragment = when (item.itemId) {
                 R.id.nav_home    -> HomeFragment()
                 R.id.nav_search  -> SearchFragment()
-                R.id.nav_chatbot -> ChatbotFragment()
                 R.id.nav_profile -> ProfileFragment()
                 else             -> HomeFragment()
             }
@@ -118,8 +117,7 @@ class DashboardActivity : AppCompatActivity() {
         val itemId = when (tabIndex) {
             0    -> R.id.nav_home
             1    -> R.id.nav_search
-            2    -> R.id.nav_chatbot
-            3    -> R.id.nav_profile
+            2    -> R.id.nav_profile
             else -> R.id.nav_home
         }
         binding.bottomNavigation.selectedItemId = itemId

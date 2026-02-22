@@ -13,7 +13,10 @@ import androidx.recyclerview.widget.RecyclerView
 import com.anonymous.gitlaneapp.BranchInfo
 import com.anonymous.gitlaneapp.GitManager
 import com.anonymous.gitlaneapp.R
+import com.anonymous.gitlaneapp.databinding.ActivityBranchBinding
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.io.File
 
 /**
@@ -37,10 +40,12 @@ class BranchActivity : AppCompatActivity() {
     private lateinit var git: GitManager
     private lateinit var repoDir: File
     private lateinit var adapter: BranchAdapter
+    private lateinit var binding: ActivityBranchBinding
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_branch)
+        binding = ActivityBranchBinding.inflate(layoutInflater)
+        setContentView(binding.root)
 
         val repoPath = intent.getStringExtra(EXTRA_REPO_PATH) ?: run { finish(); return }
         val repoName = intent.getStringExtra(EXTRA_REPO_NAME) ?: "Branches"
@@ -58,28 +63,75 @@ class BranchActivity : AppCompatActivity() {
             onRebase   = { branch -> startRebase(branch) }
         )
 
-        findViewById<RecyclerView>(R.id.rvBranches).apply {
+        binding.rvBranches.apply {
             layoutManager = LinearLayoutManager(this@BranchActivity)
             adapter = this@BranchActivity.adapter
         }
 
-        findViewById<Button>(R.id.btnNewBranch).setOnClickListener { showCreateBranchDialog() }
-        findViewById<Button>(R.id.btnCompareBranches).setOnClickListener { showCompareDialog() }
+        binding.swipes.setOnRefreshListener { loadBranches() }
 
+        setupButtons()
         loadBranches()
     }
 
     override fun onSupportNavigateUp(): Boolean { finish(); return true }
 
+    private fun setupButtons() {
+        binding.fabAddBranch.setOnClickListener { showCreateBranchDialog() }
+        binding.btnCompare.setOnClickListener   { showCompareDialog() }
+        binding.btnRestoreBranch.setOnClickListener { showRestoreDialog() }
+    }
+
+    private fun showRestoreDialog() {
+        lifecycleScope.launch {
+            val logs = git.listRecoverableRefs(repoDir)
+            if (logs.isEmpty()) {
+                Toast.makeText(this@BranchActivity, "No deleted branches found to recover.", Toast.LENGTH_SHORT).show()
+                return@launch
+            }
+            
+            val names = logs.map { logEntry -> "${logEntry.name} (${logEntry.sha.take(7)})" }.toTypedArray()
+            AlertDialog.Builder(this@BranchActivity)
+                .setTitle("Restore Deleted Branch")
+                .setItems(names as Array<CharSequence>) { _, which ->
+                    val log = logs[which]
+                    lifecycleScope.launch {
+                        try {
+                            git.recoverRef(repoDir, log.name, log.sha)
+                            Toast.makeText(this@BranchActivity, "✅ Branch '${log.name}' restored!", Toast.LENGTH_SHORT).show()
+                            loadBranches()
+                        } catch (e: Exception) {
+                            Toast.makeText(this@BranchActivity, "❌ ${e.message}", Toast.LENGTH_SHORT).show()
+                        }
+                    }
+                }
+                .setNegativeButton("Cancel", null)
+                .show()
+        }
+    }
+
     private fun loadBranches() {
         lifecycleScope.launch {
             try {
-                val branches = git.listBranches(repoDir)
+                binding.swipes.isRefreshing = true
+                val current = git.currentBranch(repoDir)
+                val rawList = withContext(Dispatchers.IO) { git.listBranches(repoDir) }
+                
+                // For each branch (except current), check if it's ahead of current branch
+                val branches = rawList.map { b ->
+                    if (!b.isCurrent) {
+                        val diff = git.compareBranches(repoDir, current, b.name)
+                        b.copy(aheadOfCurrent = diff.ahead)
+                    } else b
+                }
+                
                 adapter.submitList(branches)
-                findViewById<TextView>(R.id.tvBranchCount).text =
+                binding.tvBranchCount.text =
                     "${branches.size} branch${if (branches.size != 1) "es" else ""}"
             } catch (e: Exception) {
-                Toast.makeText(this@BranchActivity, "Error: ${e.message}", Toast.LENGTH_LONG).show()
+                Toast.makeText(this@BranchActivity, "Error: ${e.message}", Toast.LENGTH_SHORT).show()
+            } finally {
+                binding.swipes.isRefreshing = false
             }
         }
     }
@@ -106,19 +158,22 @@ class BranchActivity : AppCompatActivity() {
             return
         }
         AlertDialog.Builder(this)
-            .setTitle("Delete branch '${branch.name}'?")
-            .setMessage("This cannot be undone. Force-delete will remove even unmerged commits.")
-            .setPositiveButton("Delete") { _, _ -> deleteBranch(branch.name, false) }
-            .setNeutralButton("Force Delete") { _, _ -> deleteBranch(branch.name, true) }
+            .setTitle("Delete '${branch.name}'?")
+            .setMessage("Are you sure? This branch will be removed locally.\n(You can recover it later from the Restore menu).")
+            .setPositiveButton("Delete") { _, _ -> deleteBranch(branch) }
             .setNegativeButton("Cancel", null)
             .show()
     }
 
-    private fun deleteBranch(name: String, force: Boolean) {
+    private fun deleteBranch(branch: BranchInfo) {
         lifecycleScope.launch {
             try {
-                git.deleteBranch(repoDir, name, force)
-                Toast.makeText(this@BranchActivity, "🗑️ Branch '$name' deleted", Toast.LENGTH_SHORT).show()
+                // Log for recovery BEFORE deleting
+                val sha = git.resolveRef(repoDir, branch.name) ?: ""
+                git.logDeletedRef(repoDir, branch.name, sha)
+                
+                git.deleteBranch(repoDir, branch.name)
+                Toast.makeText(this@BranchActivity, "🗑️ Deleted branch: ${branch.name}", Toast.LENGTH_SHORT).show()
                 loadBranches()
             } catch (e: Exception) {
                 Toast.makeText(this@BranchActivity, "❌ ${e.message}", Toast.LENGTH_LONG).show()
@@ -200,10 +255,10 @@ class BranchActivity : AppCompatActivity() {
             val spTarget = view.findViewById<Spinner>(R.id.spTarget)
             val tvResult = view.findViewById<TextView>(R.id.tvCompareResult)
 
-            val adapter = ArrayAdapter(this@BranchActivity, android.R.layout.simple_spinner_item, branches)
-            adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
-            spBase.adapter   = adapter
-            spTarget.adapter = adapter
+            val spinAdapter = ArrayAdapter<String>(this@BranchActivity, android.R.layout.simple_spinner_item, branches)
+            spinAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
+            spBase.adapter   = spinAdapter
+            spTarget.adapter = spinAdapter
             spTarget.setSelection(1)
 
             val listener = object : AdapterView.OnItemSelectedListener {
@@ -312,5 +367,16 @@ class BranchAdapter(
         
         holder.btnMerge.visibility = if (b.isCurrent) View.GONE else View.VISIBLE
         holder.btnRebase.visibility = if (b.isCurrent) View.GONE else View.VISIBLE
+        
+        // Disable if no new commits to merge/rebase
+        val hasNew = b.aheadOfCurrent > 0
+        holder.btnMerge.isEnabled = hasNew
+        holder.btnRebase.isEnabled = hasNew
+        holder.btnMerge.alpha = if (hasNew) 1f else 0.4f
+        holder.btnRebase.alpha = if (hasNew) 1f else 0.4f
+        
+        if (!hasNew && !b.isCurrent) {
+            holder.tvStatus.text = "Up to date with current"
+        }
     }
 }

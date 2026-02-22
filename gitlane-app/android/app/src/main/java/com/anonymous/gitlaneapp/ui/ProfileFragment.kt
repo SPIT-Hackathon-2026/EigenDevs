@@ -197,6 +197,17 @@ class ProfileFragment : Fragment() {
         binding.btnCollaboration.setOnClickListener {
             startActivity(Intent(requireContext(), InvitationInboxActivity::class.java))
         }
+
+        // Logout
+        binding.btnLogout.setOnClickListener {
+            credentialsManager.clearAll()
+            Toast.makeText(requireContext(), "✅ Signed out", Toast.LENGTH_SHORT).show()
+            // Redirect to Dashboard (main landing)
+            val intent = Intent(requireContext(), DashboardActivity::class.java).apply {
+                flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+            }
+            startActivity(intent)
+        }
     }
 
     private fun showPatDialog() {

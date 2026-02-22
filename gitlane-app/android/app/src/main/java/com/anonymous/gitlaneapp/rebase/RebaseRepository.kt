@@ -252,8 +252,16 @@ class RebaseRepository(private val context: Context) {
                 val status = git.status().call()
                 RebaseResult.Conflict(RebaseConflictInfo(status.conflicting.toList()))
             }
+            org.eclipse.jgit.api.RebaseResult.Status.FAILED -> {
+                logOperation(repoDir, "Rebase failed: ${result.status}")
+                RebaseResult.Error("Rebase failed. Review logs for details.")
+            }
+            org.eclipse.jgit.api.RebaseResult.Status.UNCOMMITTED_CHANGES -> {
+                RebaseResult.Error("Cannot rebase: You have uncommitted changes.")
+            }
             else -> {
-                RebaseResult.Error("Rebase failed or stopped: ${result.status}")
+                logOperation(repoDir, "Unexpected rebase status: ${result.status}")
+                RebaseResult.Error("Rebase ended with status: ${result.status}")
             }
         }
     }

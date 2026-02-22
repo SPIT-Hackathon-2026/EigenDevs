@@ -8,8 +8,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material3.*
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
+import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
@@ -25,6 +24,7 @@ import java.io.File
  * Jetpack Compose implementation of the Pro Git History view.
  * Combines the visual curved graph with a scrollable commit list.
  */
+@OptIn(ExperimentalMaterial3Api::class)
 class ModernHistoryActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -36,20 +36,25 @@ class ModernHistoryActivity : ComponentActivity() {
 
         setContent {
             val uiState by viewModel.uiState.collectAsState()
-            
+            val sheetState = rememberModalBottomSheetState()
+            var showBottomSheet by remember { mutableStateOf(false) }
+
+            LaunchedEffect(uiState.selectedCommitFiles) {
+                if (uiState.selectedCommitFiles.isNotEmpty()) {
+                    showBottomSheet = true
+                }
+            }
+
             MaterialTheme(colorScheme = darkColorScheme(
-                surface = Color(0xFF0D1117),
-                background = Color(0xFF010409)
+                surface = Color(0xFF1E293B),
+                background = Color(0xFF0F172A)
             )) {
                 Box(modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
-                    // Layer 1: The Visual Graph (Static beneath the list or part of scroll)
-                    // For a professional feel, we overlay the list on top of the graphgutter
                     GitGraphVisualizer(
                         nodes = uiState.graphNodes,
                         onNodeSelected = { viewModel.selectCommit(it) }
                     )
 
-                    // Layer 2: The Commit List
                     LazyColumn(modifier = Modifier.fillMaxSize()) {
                         itemsIndexed(uiState.graphNodes) { index, node ->
                             CommitListItem(
@@ -61,6 +66,25 @@ class ModernHistoryActivity : ComponentActivity() {
 
                     if (uiState.isLoading) {
                         CircularProgressIndicator(modifier = Modifier.align(androidx.compose.ui.Alignment.Center))
+                    }
+                }
+
+                if (showBottomSheet) {
+                    ModalBottomSheet(
+                        onDismissRequest = { showBottomSheet = false },
+                        sheetState = sheetState,
+                        containerColor = Color(0xFF1E293B)
+                    ) {
+                        Column(modifier = Modifier.padding(16.dp).fillMaxWidth()) {
+                            Text("Changed Files", style = MaterialTheme.typography.titleMedium, color = Color.White)
+                            Spacer(Modifier.height(8.dp))
+                            LazyColumn(modifier = Modifier.padding(bottom = 32.dp)) {
+                                items(uiState.selectedCommitFiles.size) { index ->
+                                    val file = uiState.selectedCommitFiles[index]
+                                    Text("• $file", modifier = Modifier.padding(vertical = 4.dp), color = Color(0xFF94A3B8), style = MaterialTheme.typography.bodyMedium)
+                                }
+                            }
+                        }
                     }
                 }
             }

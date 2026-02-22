@@ -12,11 +12,11 @@ import kotlinx.coroutines.launch
 import java.io.File
 
 data class HistoryUiState(
-    val commits: List<CommitInfo> = emptyList(),
+    val commits: List<com.anonymous.gitlaneapp.CommitInfo> = emptyList(),
     val graphNodes: List<CommitGraphEngine.GraphNode> = emptyList(),
     val isLoading: Boolean = false,
+    val selectedCommitFiles: List<String> = emptyList(),
     val selectedNode: CommitGraphEngine.GraphNode? = null,
-    val commitChanges: List<DiffEngine.FileDiff> = emptyList(),
     val error: String? = null
 )
 
@@ -55,7 +55,9 @@ class HistoryViewModel(
 
     fun selectCommit(node: CommitGraphEngine.GraphNode) {
         _uiState.value = _uiState.value.copy(selectedNode = node)
-        // Load diffs for this commit using DiffEngine
-        // (Implementation omitted for brevity, but would use GitManager to get RevCommit)
+        viewModelScope.launch {
+            val files = git.getChangedFiles(repoDir, node.commit.sha)
+            _uiState.value = _uiState.value.copy(selectedCommitFiles = files)
+        }
     }
 }

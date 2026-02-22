@@ -190,20 +190,7 @@
                         android:text="🌐  Fetch My Repos"
                         android:textAllCaps="false"
                         android:textSize="13sp"
-                        android:layout_marginBottom="8dp"
                         app:backgroundTint="@color/accent"
-                        app:cornerRadius="10dp"/>
-
-                    <com.google.android.material.button.MaterialButton
-                        android:id="@+id/btnSearchPublic"
-                        android:layout_width="match_parent"
-                        android:layout_height="40dp"
-                        android:text="🔍  Search GitHub"
-                        android:textAllCaps="false"
-                        android:textSize="12sp"
-                        style="@style/Widget.Material3.Button.OutlinedButton"
-                        app:strokeColor="@color/glass_border"
-                        android:textColor="@color/text_secondary"
                         app:cornerRadius="10dp"/>
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>

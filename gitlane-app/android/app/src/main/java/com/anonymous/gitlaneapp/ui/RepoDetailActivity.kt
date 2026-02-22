@@ -39,18 +39,17 @@ class RepoDetailActivity : AppCompatActivity() {
     private lateinit var currentPath: File // For folder browsing
     private lateinit var fileAdapter: FileAdapter
 
+    private var collaboratorFetchJob: kotlinx.coroutines.Job? = null
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         binding = ActivityRepoDetailBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
         val repoPath = intent.getStringExtra(EXTRA_REPO_PATH) ?: run { finish(); return }
-        val repoName = intent.getStringExtra(EXTRA_REPO_NAME) ?: "Repository"
         repoDir = File(repoPath)
         currentPath = repoDir
-
         git = GitManager(this)
-        supportActionBar?.hide()
 
         // Safety net: log + toast any coroutine crash instead of killing the process
         val crashHandler = kotlinx.coroutines.CoroutineExceptionHandler { _, throwable ->
@@ -58,6 +57,11 @@ class RepoDetailActivity : AppCompatActivity() {
             Toast.makeText(this, "⚠️ Error: ${throwable.localizedMessage}", Toast.LENGTH_LONG).show()
         }
 
+        setupListeners()
+        loadRepoInfo()
+    }
+
+    private fun setupListeners() {
         // Custom header back button (in activity_repo_detail.xml)
         binding.btnHeaderBack.setOnClickListener {
             if (currentPath != repoDir) {
@@ -67,7 +71,6 @@ class RepoDetailActivity : AppCompatActivity() {
                 finish()
             }
         }
-
         setupRecyclerView()
         setupButtons()
         setupRebaseBanner()
@@ -436,6 +439,11 @@ class RepoDetailActivity : AppCompatActivity() {
             val count  = withContext(Dispatchers.IO) { git.commitCount(repoDir) }
             val status = withContext(Dispatchers.IO) { git.getStatus(repoDir) }
             
+            // Sync status (unpushed commits)
+            val branches = withContext(Dispatchers.IO) { git.listBranches(repoDir) }
+            val currentBranchInfo = branches.find { it.name == branch }
+            val aheadCount = currentBranchInfo?.ahead ?: 0
+            
             // Modified listFiles to take currentPath
             val files  = withContext(Dispatchers.IO) {
                 currentPath.listFiles { f -> f.name != ".git" }
@@ -443,10 +451,16 @@ class RepoDetailActivity : AppCompatActivity() {
                     ?: emptyList()
             }
 
+            val modifiedFolders = withContext(Dispatchers.IO) { git.getModifiedFolders(repoDir) }
+
             binding.tvBranch.text = "🌿 $branch"
             binding.tvCommitCount.text = "$count commit${if (count != 1) "s" else ""}"
             binding.btnHistory.text = "History ($count)"
-            fileAdapter.submitList(files)
+            
+            binding.btnPush.text = if (aheadCount > 0) "↑ Push ($aheadCount)" else "↑ Push to Remote"
+            binding.btnUndoCommit.visibility = if (count > 0) View.VISIBLE else View.GONE
+            
+            fileAdapter.submitData(files, modifiedFolders, repoDir.absolutePath)
 
             // Breadcrumb in custom header
             val relative = currentPath.absolutePath
@@ -510,14 +524,18 @@ class RepoDetailActivity : AppCompatActivity() {
     }
 
     private var currentRepoFullName: String? = null   // cached for remove calls
+    private var currentUsername: String? = null
 
     private fun fetchCollaborators(remoteUrl: String) {
+        // Cancel existing fetch to prevent duplication
+        collaboratorFetchJob?.cancel()
+
         // Reset UI to loading state
         binding.tvCollaboratorLoading.visibility = View.VISIBLE
         binding.tvCollaboratorError.visibility = View.GONE
         binding.llCollaboratorRows.removeAllViews()
 
-        lifecycleScope.launch {
+        collaboratorFetchJob = lifecycleScope.launch {
             try {
                 val fullName = com.anonymous.gitlaneapp.GitHubApiManager.extractFullName(remoteUrl)
                     ?: return@launch
@@ -528,8 +546,10 @@ class RepoDetailActivity : AppCompatActivity() {
                     showCollaboratorError("⚠️ No GitHub token — set one in Settings to view members.")
                     return@launch
                 }
-
                 val api = com.anonymous.gitlaneapp.GitHubApiManager(token)
+                if (currentUsername == null) {
+                    currentUsername = try { api.getUserProfile().login } catch (e: Exception) { null }
+                }
 
                 val list: List<String> = try {
                     api.listCollaborators(fullName)
@@ -693,7 +713,11 @@ class RepoDetailActivity : AppCompatActivity() {
             ).also { it.gravity = android.view.Gravity.CENTER_VERTICAL }
         }
 
-        // Remove button
+        // Remove button (only show if current user is owner AND NOT removing themselves)
+        val owner = repoFullName.split("/").firstOrNull()
+        val isOwner = currentUsername != null && owner != null && currentUsername.equals(owner, ignoreCase = true)
+        val isSelf = currentUsername != null && username.equals(currentUsername, ignoreCase = true)
+
         val removeBtn = android.widget.TextView(this).apply {
             text = "✕ Remove"
             textSize = 11f
@@ -719,6 +743,9 @@ class RepoDetailActivity : AppCompatActivity() {
             ).also { it.gravity = android.view.Gravity.CENTER_VERTICAL }
             isClickable = true
             isFocusable = true
+            
+            visibility = if (isOwner && !isSelf) View.VISIBLE else View.GONE
+            
             setOnClickListener {
                 confirmRemoveCollaborator(username, repoFullName, api, row)
             }
@@ -820,14 +847,18 @@ class RepoDetailActivity : AppCompatActivity() {
                 }
             }
 
-            // Delete / remove button
+            // Undo / Discard button
             val deleteBtn = android.widget.TextView(this).apply {
-                text = "✕"
-                textSize = 13f
-                setTextColor(android.graphics.Color.parseColor("#475569"))
-                setPadding(24, 0, 4, 0)
+                text = if (isUntracked) "✕ Delete" else "↺ Discard"
+                setTextSize(android.util.TypedValue.COMPLEX_UNIT_SP, 11f)
+                setTextColor(android.graphics.Color.parseColor("#94A3B8"))
+                setPadding(24, 8, 8, 8)
                 setOnClickListener {
-                    deleteOrRemoveFile(path, isUntracked)
+                    if (isUntracked) {
+                        performFileDeletion(path)
+                    } else {
+                        discardFileChanges(path)
+                    }
                 }
             }
 
@@ -848,24 +879,39 @@ class RepoDetailActivity : AppCompatActivity() {
         }
     }
 
-    /** Delete an untracked file physically, or stage removal of a tracked file. */
-    private fun deleteOrRemoveFile(relativePath: String, isUntracked: Boolean) {
+    private fun performFileDeletion(relativePath: String) {
         lifecycleScope.launch {
             try {
                 withContext(Dispatchers.IO) {
-                    val target = File(repoDir, relativePath)
-                    if (isUntracked) {
-                        target.delete()
-                    } else {
-                        // Stage the deletion so git knows about it
-                        git.stageRemoval(repoDir, relativePath)
-                        target.delete()
-                    }
+                    File(repoDir, relativePath).delete()
                 }
-                Toast.makeText(this@RepoDetailActivity, "🗑️ Removed $relativePath", Toast.LENGTH_SHORT).show()
                 loadRepoInfo()
             } catch (e: Exception) {
-                Toast.makeText(this@RepoDetailActivity, "❌ ${e.message}", Toast.LENGTH_LONG).show()
+                Toast.makeText(this@RepoDetailActivity, "❌ Delete failed: ${e.message}", Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
+
+    private fun discardFileChanges(relativePath: String) {
+        lifecycleScope.launch {
+            try {
+                git.discardChanges(repoDir, relativePath)
+                Toast.makeText(this@RepoDetailActivity, "↺ Discarded changes to $relativePath", Toast.LENGTH_SHORT).show()
+                loadRepoInfo()
+            } catch (e: Exception) {
+                Toast.makeText(this@RepoDetailActivity, "❌ Discard failed: ${e.message}", Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
+
+    private fun undoLastCommit() {
+        lifecycleScope.launch {
+            try {
+                git.undoLastCommit(repoDir)
+                Toast.makeText(this@RepoDetailActivity, "⏪ Last commit undone", Toast.LENGTH_SHORT).show()
+                loadRepoInfo()
+            } catch (e: Exception) {
+                Toast.makeText(this@RepoDetailActivity, "❌ Undo failed: ${e.message}", Toast.LENGTH_SHORT).show()
             }
         }
     }

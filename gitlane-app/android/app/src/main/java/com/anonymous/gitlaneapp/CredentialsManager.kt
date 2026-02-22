@@ -59,6 +59,11 @@ class CredentialsManager(context: Context) {
 
     fun hasAnyToken(): Boolean = prefs.all.any { it.key.startsWith("pat_") }
 
+    /** Clear all stored credentials. */
+    fun clearAll() {
+        prefs.edit().clear().apply()
+    }
+
     private fun patKey(host: String) = "pat_$host"
 
     companion object {

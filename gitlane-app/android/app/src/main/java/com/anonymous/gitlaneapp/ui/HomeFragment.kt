@@ -94,10 +94,6 @@ class HomeFragment : Fragment() {
             refreshLauncher.launch(Intent(requireContext(), GitHubRepoListActivity::class.java))
         }
 
-        // Search GitHub
-        binding.btnSearchPublic.setOnClickListener {
-            startActivity(Intent(requireContext(), PublicRepoSearchActivity::class.java))
-        }
 
         // QR FAB
         binding.fabScanQr.setOnClickListener {
@@ -270,7 +266,7 @@ class HomeFragment : Fragment() {
                 .setMessage("To clone private repos and view your GitHub projects, connect your GitHub account in the Profile tab.")
                 .setPositiveButton("Go to Profile") { _, _ ->
                     // Switch to Profile tab
-                    (activity as? DashboardActivity)?.switchToTab(3)
+                    (activity as? DashboardActivity)?.switchToTab(2)
                 }
                 .setNegativeButton("Later", null)
                 .show()

@@ -546,6 +546,21 @@
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 
+            <!-- Logout Button -->
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnLogout"
+                android:layout_width="match_parent"
+                android:layout_height="50dp"
+                android:text="Logout"
+                android:textAllCaps="false"
+                android:textSize="14sp"
+                android:textStyle="bold"
+                android:textColor="#FF5252"
+                style="@style/Widget.Material3.Button.OutlinedButton"
+                app:strokeColor="#FF5252"
+                app:strokeWidth="1dp"
+                app:cornerRadius="14dp"
+                android:layout_marginBottom="24dp"/>
         </LinearLayout>
     </LinearLayout>
 </ScrollView>

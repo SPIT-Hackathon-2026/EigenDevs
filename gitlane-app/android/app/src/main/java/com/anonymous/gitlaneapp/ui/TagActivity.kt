@@ -195,6 +195,10 @@ class TagAdapter(
         holder.tvDate.text = "Created on ${t.date}"
         
         holder.btnPush.setOnClickListener   { onPush(t) }
+        holder.btnPush.isEnabled = !t.isPushed
+        holder.btnPush.alpha = if (t.isPushed) 0.5f else 1.0f
+        holder.btnPush.text = if (t.isPushed) "✓ Pushed" else "↑ Push"
+        
         holder.btnDelete.setOnClickListener { onDelete(t) }
     }
 }

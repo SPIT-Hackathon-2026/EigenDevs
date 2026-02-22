@@ -136,6 +136,48 @@ class GitManager(context: Context) {
         }
     }
 
+    /**
+     * "Undoes" the last commit. Soft reset to HEAD~1 keeps files in the index/working tree.
+     */
+    suspend fun undoLastCommit(repoDir: File) = withContext(Dispatchers.IO) {
+        val count = commitCount(repoDir)
+        if (count < 1) throw IllegalStateException("No commits to undo")
+        
+        openGit(repoDir).use { git ->
+            // If only 1 commit, we might want to reset to an empty tree or just warn
+            // But usually users mean 'undo the last commit they just made'
+            git.reset().setMode(ResetCommand.ResetType.SOFT).setRef("HEAD~1").call()
+        }
+    }
+
+    /**
+     * Returns a set of relative folder paths that contain modified files.
+     */
+    suspend fun getModifiedFolders(repoDir: File): Set<String> = withContext(Dispatchers.IO) {
+        val status = getStatus(repoDir)
+        val allChanges = status.allChanges()
+        val folders = mutableSetOf<String>()
+        
+        allChanges.forEach { path ->
+            val parts = path.split("/")
+            var current = ""
+            for (i in 0 until parts.size - 1) {
+                current = if (current.isEmpty()) parts[i] else "$current/${parts[i]}"
+                folders.add(current)
+            }
+        }
+        folders
+    }
+
+    /**
+     * Reverts local changes to a specific file (git checkout -- path).
+     */
+    suspend fun discardChanges(repoDir: File, path: String) = withContext(Dispatchers.IO) {
+        openGit(repoDir).use { git ->
+            git.checkout().addPath(path).call()
+        }
+    }
+
     suspend fun getLog(repoDir: File): List<CommitInfo> = withContext(Dispatchers.IO) {
         try {
             openGit(repoDir).use { git ->
@@ -316,16 +358,29 @@ class GitManager(context: Context) {
     suspend fun listTags(repoDir: File): List<TagInfo> = withContext(Dispatchers.IO) {
         try {
             openGit(repoDir).use { git ->
+                // Fetch remote tags list to see what's pushed
+                val remotes = listRemotes(repoDir)
+                val remoteTags = mutableSetOf<String>()
+                if (remotes.isNotEmpty()) {
+                    try {
+                        val remote = remotes.find { it.name == "origin" } ?: remotes[0]
+                        git.lsRemote().setRemote(remote.name).setTags(true).call().forEach {
+                            remoteTags.add(it.name.removePrefix("refs/tags/"))
+                        }
+                    } catch (e: Exception) { /* Ignore remote listing errors */ }
+                }
+
                 git.tagList().call().mapNotNull { ref ->
-                    val name = ref.name.removePrefix("refs/tags/")
+                    val fullName = ref.name.removePrefix("refs/tags/")
                     val walk = RevWalk(git.repository)
                     val targetId = ref.objectId ?: return@mapNotNull null
                     val commit = try { walk.parseCommit(targetId) } catch (e: Exception) { null } ?: return@mapNotNull null
                     TagInfo(
-                        name = name,
+                        name = fullName,
                         sha = commit.abbreviate(8).name(),
                         date = SimpleDateFormat("dd MMM yyyy", Locale.getDefault())
-                            .format(Date(commit.commitTime * 1000L))
+                            .format(Date(commit.commitTime * 1000L)),
+                        isPushed = remoteTags.contains(fullName)
                     )
                 }
             }
@@ -633,6 +688,91 @@ class GitManager(context: Context) {
             "Diff error: ${e.message}"
         }
     }
+
+    /**
+     * Returns a list of file paths that were modified in a specific commit.
+     */
+    suspend fun getChangedFiles(repoDir: File, sha: String): List<String> = withContext(Dispatchers.IO) {
+        try {
+            openGit(repoDir).use { git ->
+                val repository = git.repository
+                val commitId = repository.resolve(sha) ?: return@withContext emptyList()
+                val walk = RevWalk(repository)
+                val commit = walk.parseCommit(commitId)
+                val parent = if (commit.parentCount > 0) walk.parseCommit(commit.getParent(0).id) else null
+
+                val out = ByteArrayOutputStream()
+                val df = DiffFormatter(out)
+                df.setRepository(repository)
+                df.isDetectRenames = true
+
+                val diffs = if (parent != null) {
+                    df.scan(parent.tree, commit.tree)
+                } else {
+                    val reader = repository.newObjectReader()
+                    df.scan(EmptyTreeIterator(), CanonicalTreeParser(null, reader, commit.tree))
+                }
+                diffs.map { it.newPath }.distinct().sorted()
+            }
+        } catch (e: Exception) {
+            emptyList()
+        }
+    }
+
+    suspend fun resolveRef(repoDir: File, refName: String): String? = withContext(Dispatchers.IO) {
+        try {
+            openGit(repoDir).use { git ->
+                git.repository.resolve(refName)?.name
+            }
+        } catch (e: Exception) { null }
+    }
+
+    /**
+     * Logs a deleted branch/tag to a local JSON file to allow recovery.
+     */
+    suspend fun logDeletedRef(repoDir: File, refName: String, sha: String) = withContext(Dispatchers.IO) {
+        try {
+            val recoveryDir = File(repoDir, ".git/gitlane")
+            if (!recoveryDir.exists()) recoveryDir.mkdirs()
+            val recoveryFile = File(recoveryDir, "recovery.json")
+            
+            val gson = com.google.gson.Gson()
+            val logs = if (recoveryFile.exists()) {
+                val json = recoveryFile.readText()
+                val type = object : com.google.gson.reflect.TypeToken<MutableList<RecoveryLog>>() {}.type
+                gson.fromJson<MutableList<RecoveryLog>>(json, type) ?: mutableListOf()
+            } else {
+                mutableListOf()
+            }
+            
+            logs.add(RecoveryLog(refName, sha, System.currentTimeMillis()))
+            recoveryFile.writeText(gson.toJson(logs))
+        } catch (e: Exception) {
+            android.util.Log.e("GitManager", "logDeletedRef failed", e)
+        }
+    }
+
+    suspend fun listRecoverableRefs(repoDir: File): List<RecoveryLog> = withContext(Dispatchers.IO) {
+        try {
+            val recoveryFile = File(repoDir, ".git/gitlane/recovery.json")
+            if (!recoveryFile.exists()) return@withContext emptyList()
+            val gson = com.google.gson.Gson()
+            val json = recoveryFile.readText()
+            val type = object : com.google.gson.reflect.TypeToken<List<RecoveryLog>>() {}.type
+            gson.fromJson<List<RecoveryLog>>(json, type) ?: emptyList()
+        } catch (e: Exception) {
+            emptyList()
+        }
+    }
+
+    suspend fun recoverRef(repoDir: File, refName: String, sha: String) = withContext(Dispatchers.IO) {
+        openGit(repoDir).use { git ->
+            git.branchCreate()
+                .setName(refName)
+                .setStartPoint(sha)
+                .call()
+        }
+    }
 }
 
 // ── Data classes ─────────────────────────────────────────────────────────────
@@ -646,12 +786,19 @@ data class CommitInfo(
     val isConflict: Boolean = false
 )
 
+data class HistoryUiState(
+    val commits: List<com.anonymous.gitlaneapp.CommitInfo> = emptyList(),
+    val isLoading: Boolean = false,
+    val selectedCommitFiles: List<String> = emptyList()
+)
+
 data class BranchInfo(
     val name: String,
     val isCurrent: Boolean,
     val ahead: Int = 0,
     val behind: Int = 0,
-    val upstream: String? = null
+    val upstream: String? = null,
+    val aheadOfCurrent: Int = 0 // Relative to currently checked-out branch
 )
 
 data class RemoteInfo(
@@ -663,10 +810,17 @@ data class RemoteInfo(
 data class TagInfo(
     val name: String,
     val sha: String,
-    val date: String
+    val date: String,
+    val isPushed: Boolean = false
 )
 
 data class AheadBehind(val ahead: Int, val behind: Int)
+
+data class RecoveryLog(
+    val name: String,
+    val sha: String,
+    val timestamp: Long
+)
 
 data class GitStatus(
     val modified: List<String> = emptyList(),
