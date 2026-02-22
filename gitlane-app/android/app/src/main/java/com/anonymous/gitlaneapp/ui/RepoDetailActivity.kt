@@ -300,6 +300,27 @@ class RepoDetailActivity : AppCompatActivity() {
             currentPath = currentPath.parentFile ?: repoDir
             loadRepoInfo()
         }
+
+        // Undo last commit (soft reset — keeps changes staged)
+        binding.btnUndoCommit.setOnClickListener {
+            android.app.AlertDialog.Builder(this)
+                .setTitle("↩ Undo Last Commit?")
+                .setMessage("This will soft-reset HEAD~1. Your files stay staged — you can re-commit with a different message.")
+                .setPositiveButton("Undo") { _, _ ->
+                    lifecycleScope.launch {
+                        try {
+                            withContext(Dispatchers.IO) { git.undoLastCommit(repoDir) }
+                            Toast.makeText(this@RepoDetailActivity, "↩ Last commit undone. Changes are still staged.", Toast.LENGTH_LONG).show()
+                            loadRepoInfo()
+                        } catch (e: Exception) {
+                            android.util.Log.e("RepoDetail", "undoLastCommit failed", e)
+                            Toast.makeText(this@RepoDetailActivity, "❌ Undo failed: ${e.message}", Toast.LENGTH_LONG).show()
+                        }
+                    }
+                }
+                .setNegativeButton("Cancel", null)
+                .show()
+        }
     }
 
     private fun optimizeRepoStorage() {
@@ -512,13 +533,20 @@ class RepoDetailActivity : AppCompatActivity() {
         lifecycleScope.launch {
             try {
                 val sha = withContext(Dispatchers.IO) {
+                    // stageAll + commit are called inside the same IO block so the
+                    // Mutex in GitManager serialises them without re-entering the lock.
                     git.stageAll(repoDir)
                     git.commit(repoDir, message)
                 }
                 Toast.makeText(this@RepoDetailActivity, "✅ Committed [$sha]", Toast.LENGTH_SHORT).show()
                 loadRepoInfo()
             } catch (e: Exception) {
-                Toast.makeText(this@RepoDetailActivity, "❌ Commit failed: ${e.message}", Toast.LENGTH_LONG).show()
+                android.util.Log.e("RepoDetail", "stageAndCommit failed", e)
+                Toast.makeText(
+                    this@RepoDetailActivity,
+                    "❌ Commit failed: ${e.javaClass.simpleName}: ${e.message}",
+                    Toast.LENGTH_LONG
+                ).show()
             }
         }
     }
@@ -895,11 +923,18 @@ class RepoDetailActivity : AppCompatActivity() {
     private fun discardFileChanges(relativePath: String) {
         lifecycleScope.launch {
             try {
-                git.discardChanges(repoDir, relativePath)
+                withContext(Dispatchers.IO) {
+                    git.discardChanges(repoDir, relativePath)
+                }
                 Toast.makeText(this@RepoDetailActivity, "↺ Discarded changes to $relativePath", Toast.LENGTH_SHORT).show()
                 loadRepoInfo()
             } catch (e: Exception) {
-                Toast.makeText(this@RepoDetailActivity, "❌ Discard failed: ${e.message}", Toast.LENGTH_SHORT).show()
+                android.util.Log.e("RepoDetail", "discardChanges failed", e)
+                Toast.makeText(
+                    this@RepoDetailActivity,
+                    "❌ Discard failed: ${e.javaClass.simpleName}: ${e.message}",
+                    Toast.LENGTH_LONG
+                ).show()
             }
         }
     }

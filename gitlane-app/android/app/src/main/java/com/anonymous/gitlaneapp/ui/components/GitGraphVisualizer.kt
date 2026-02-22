@@ -10,11 +10,13 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.*
 import androidx.compose.ui.graphics.drawscope.Stroke
 import com.anonymous.gitlaneapp.engine.CommitGraphEngine
+import kotlin.math.min
 
 /**
  * Modern Git Graph UI Component
- * 
- * Draws curved Bézier connections between branch lanes and commit nodes.
+ *
+ * Draws curved Bézier connections between branch lanes and commit nodes,
+ * plus a GitHub-style +++--- diff-stat bar beside each commit.
  * Supports pinch-to-zoom and pan.
  */
 @Composable
@@ -29,9 +31,17 @@ fun GitGraphVisualizer(
         offset += offsetChange
     }
 
-    val laneWidth = 40f
+    val laneWidth      = 40f
     val verticalSpacing = 120f
-    val startX = 60f
+    val startX         = 60f
+    val statBarStartX  = startX + (nodes.maxOfOrNull { it.lane + 1 } ?: 1) * laneWidth + 20f
+    val statBarMaxW    = 72f   // total max width for the bar
+    val statBarHeight  = 8f
+
+    // Pre-compute max total changes so we can scale bars proportionally
+    val maxChanges = nodes.maxOfOrNull {
+        (it.commit.additions + it.commit.deletions).coerceAtLeast(1)
+    }?.toFloat() ?: 1f
 
     Canvas(
         modifier = Modifier
@@ -45,31 +55,24 @@ fun GitGraphVisualizer(
             )
     ) {
         val path = Path()
-        
+
         // 1. Draw Paths (Edges)
         nodes.forEachIndexed { index, node ->
             val nodeX = startX + node.lane * laneWidth
             val nodeY = index * verticalSpacing + (verticalSpacing / 2)
 
-            // Draw towards children (lines flowing from bottom to top in our timeline)
             node.children.forEach { childSha ->
-                val childNode = nodes.find { it.commit.sha == childSha } ?: return@forEach
+                val childNode  = nodes.find { it.commit.sha == childSha } ?: return@forEach
                 val childIndex = nodes.indexOf(childNode)
-                val childX = startX + childNode.lane * laneWidth
-                val childY = childIndex * verticalSpacing + (verticalSpacing / 2)
+                val childX     = startX + childNode.lane * laneWidth
+                val childY     = childIndex * verticalSpacing + (verticalSpacing / 2)
 
                 path.reset()
                 path.moveTo(nodeX, nodeY)
-                
-                // Use Cubic Bézier for smooth GitKraken-style curves
+
                 val controlY1 = nodeY - (verticalSpacing * 0.4f)
                 val controlY2 = childY + (verticalSpacing * 0.4f)
-                
-                path.cubicTo(
-                    nodeX, controlY1,
-                    childX, controlY2,
-                    childX, childY
-                )
+                path.cubicTo(nodeX, controlY1, childX, controlY2, childX, childY)
 
                 drawPath(
                     path = path,
@@ -85,33 +88,45 @@ fun GitGraphVisualizer(
             val nodeY = index * verticalSpacing + (verticalSpacing / 2)
 
             // Outer ring
-            drawCircle(
-                color = Color.White,
-                radius = 12f,
-                center = Offset(nodeX, nodeY)
-            )
+            drawCircle(color = Color.White, radius = 12f, center = Offset(nodeX, nodeY))
 
-            // Inner core
+            // Inner core — red for conflict, branch color otherwise
             drawCircle(
                 color = if (node.commit.isConflict) Color(0xFFF85149) else Color(node.color),
                 radius = 8f,
                 center = Offset(nodeX, nodeY)
             )
-            
-            // Conflict 'X' overlay if applicable
+
+            // Conflict 'X' overlay
             if (node.commit.isConflict) {
                 val s = 6f
-                drawLine(
-                    color = Color.White,
-                    start = Offset(nodeX - s, nodeY - s),
-                    end = Offset(nodeX + s, nodeY + s),
-                    strokeWidth = 3f
+                drawLine(Color.White, Offset(nodeX - s, nodeY - s), Offset(nodeX + s, nodeY + s), strokeWidth = 3f)
+                drawLine(Color.White, Offset(nodeX + s, nodeY - s), Offset(nodeX - s, nodeY + s), strokeWidth = 3f)
+            }
+
+            // 3. Diff stat bar  +++----
+            val adds = node.commit.additions
+            val dels = node.commit.deletions
+            val total = (adds + dels).toFloat().coerceAtLeast(1f)
+            val ratio = min(total / maxChanges, 1f)          // scale relative to max
+            val barW  = statBarMaxW * ratio                   // total bar width this commit
+            val addW  = barW * (adds / total)
+            val delW  = barW * (dels / total)
+
+            val barY = nodeY - statBarHeight / 2f
+
+            if (addW > 0f) {
+                drawRect(
+                    color = Color(0xFF3FB950),    // GitHub green
+                    topLeft = Offset(statBarStartX, barY),
+                    size = androidx.compose.ui.geometry.Size(addW, statBarHeight)
                 )
-                drawLine(
-                    color = Color.White,
-                    start = Offset(nodeX + s, nodeY - s),
-                    end = Offset(nodeX - s, nodeY + s),
-                    strokeWidth = 3f
+            }
+            if (delW > 0f) {
+                drawRect(
+                    color = Color(0xFFF85149),    // GitHub red
+                    topLeft = Offset(statBarStartX + addW, barY),
+                    size = androidx.compose.ui.geometry.Size(delW, statBarHeight)
                 )
             }
         }

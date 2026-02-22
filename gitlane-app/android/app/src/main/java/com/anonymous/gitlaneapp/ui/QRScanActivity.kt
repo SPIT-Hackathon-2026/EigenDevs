@@ -16,7 +16,9 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.File
 import java.io.FileOutputStream
-import java.net.URL
+import okhttp3.OkHttpClient
+import okhttp3.Request
+import java.util.concurrent.TimeUnit
 
 /**
  * Opened when the user taps the 📷 scan button on Dashboard.
@@ -85,16 +87,27 @@ class QRScanActivity : AppCompatActivity() {
         val repoName   = stripped.substring(slashIdx + 1)     // myrepo
         val bundleUrl  = "http://$hostPort/$repoName.bundle"
 
+        // Use OkHttp directly — java.net.URL goes through Android's legacy okhttp shim
+        // which doesn't handle HTTP/1.1 keep-alive properly and causes
+        // "unexpected end of stream" errors when receiving from NanoHTTPD.
+        val httpClient = OkHttpClient.Builder()
+            .connectTimeout(15, TimeUnit.SECONDS)
+            .readTimeout(60, TimeUnit.SECONDS)   // bundles can be large
+            .writeTimeout(15, TimeUnit.SECONDS)
+            .retryOnConnectionFailure(false)      // fail-fast so the error surfaces clearly
+            .build()
+
         lifecycleScope.launch {
             try {
                 // 1. Download the bundle
                 val bundleFile = File(cacheDir, "$repoName.bundle")
                 withContext(Dispatchers.IO) {
-                    val connection = URL(bundleUrl).openConnection()
-                    connection.connectTimeout = 10000 // 10 seconds
-                    connection.readTimeout = 10000    // 10 seconds
-                    
-                    connection.getInputStream().use { input ->
+                    val request = Request.Builder().url(bundleUrl).build()
+                    val response = httpClient.newCall(request).execute()
+                    if (!response.isSuccessful) {
+                        throw Exception("HTTP ${response.code}: ${response.message}")
+                    }
+                    response.body!!.byteStream().use { input ->
                         FileOutputStream(bundleFile).use { output ->
                             input.copyTo(output)
                         }

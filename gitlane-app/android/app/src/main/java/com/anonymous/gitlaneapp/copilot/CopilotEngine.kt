@@ -21,6 +21,8 @@ import org.json.JSONObject
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 import java.io.File
+import java.net.InetSocketAddress
+import java.net.Socket
 import java.util.concurrent.TimeUnit
 
 // ─── Structured result types ─────────────────────────────────────────────────
@@ -120,6 +122,16 @@ class CopilotEngine(private val context: Context) {
 
     private val groq by lazy { createGroqService() }
 
+    /** Fast connectivity probe — checks if api.groq.com:443 is reachable within 3 s. */
+    private suspend fun isGroqReachable(): Boolean = withContext(Dispatchers.IO) {
+        try {
+            Socket().use { sock ->
+                sock.connect(InetSocketAddress("api.groq.com", 443), 3_000)
+                true
+            }
+        } catch (_: Exception) { false }
+    }
+
     // ── Public entry point ────────────────────────────────────────────────────
 
     suspend fun process(
@@ -144,6 +156,13 @@ class CopilotEngine(private val context: Context) {
             ?: return@withContext CopilotResult.ActionDone(
                 "⚠️ No Groq API key configured. Go to **Settings → Groq API Key**.", false
             )
+
+        // Fast offline check before waiting for OkHttp timeout
+        if (!isGroqReachable()) {
+            return@withContext CopilotResult.ActionDone(
+                "📡 No internet connection. Connect to Wi-Fi or mobile data to use AI features.", false
+            )
+        }
 
         val repoContext  = buildContextBlock(currentRepoDir)
         val systemPrompt = buildSystemPrompt(repoContext, currentRepoDir)
@@ -383,6 +402,54 @@ class CopilotEngine(private val context: Context) {
             is LocalIntentClassifier.LocalIntent.Rebase -> {
                 val d = dir ?: return CopilotResult.NeedInput("Which repo?", "rebase", emptyMap())
                 CopilotResult.ActionDone("__REBASE__:${d.absolutePath}|${intent.upstream}", true)
+            }
+
+            // ── File reading (no network needed) ───────────────────────────────
+
+            is LocalIntentClassifier.LocalIntent.ListFiles -> {
+                val d = dir ?: return CopilotResult.NeedInput("Which repo?", "list_files", emptyMap())
+                try {
+                    val sb = StringBuilder("📂 **Files in ${d.name}**\n\n```\n")
+                    d.walkTopDown()
+                        .filter { !it.absolutePath.contains("/.git") && !it.absolutePath.contains("\\.git") }
+                        .drop(1) // skip root itself
+                        .take(200)
+                        .forEach { f ->
+                            val rel   = f.relativeTo(d).path.replace('\\', '/')
+                            val depth = rel.count { it == '/' }
+                            val indent = "  ".repeat(depth)
+                            val icon  = if (f.isDirectory) "📁" else "📄"
+                            sb.appendLine("$indent$icon ${f.name}")
+                        }
+                    sb.append("```")
+                    CopilotResult.Text(sb.toString())
+                } catch (e: Exception) {
+                    CopilotResult.ActionDone("❌ Could not list files: ${e.message}", false)
+                }
+            }
+
+            is LocalIntentClassifier.LocalIntent.ReadFile -> {
+                val d = dir ?: return CopilotResult.NeedInput("Which repo?", "read_file", emptyMap())
+                try {
+                    val file = File(d, intent.path)
+                    if (!file.exists()) {
+                        // Try case-insensitive walk
+                        val found = d.walkTopDown().firstOrNull {
+                            it.name.equals(intent.path, ignoreCase = true) ||
+                            it.relativeTo(d).path.replace('\\','/').equals(intent.path, ignoreCase = true)
+                        }
+                        if (found == null) return CopilotResult.Text("❌ File `${intent.path}` not found in **${d.name}**.")
+                        val content = found.readText(Charsets.UTF_8).take(4000)
+                        val ext = found.extension
+                        CopilotResult.Text("📄 **${found.name}** (${found.length()} bytes)\n\n```$ext\n$content\n```")
+                    } else {
+                        val content = file.readText(Charsets.UTF_8).take(4000)
+                        val ext = file.extension
+                        CopilotResult.Text("📄 **${file.name}** (${file.length()} bytes)\n\n```$ext\n$content\n```")
+                    }
+                } catch (e: Exception) {
+                    CopilotResult.ActionDone("❌ Could not read file: ${e.message}", false)
+                }
             }
 
             // ── AI-required (still needs Groq) — return null to fall through ─

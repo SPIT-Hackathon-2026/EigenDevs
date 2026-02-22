@@ -1,81 +1,171 @@
 <?xml version="1.0" encoding="utf-8"?>
-<com.google.android.material.card.MaterialCardView xmlns:android="http://schemas.android.com/apk/res/android"
+<com.google.android.material.card.MaterialCardView
+    xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/cardBranch"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
+    android:layout_marginHorizontal="12dp"
     android:layout_marginBottom="8dp"
-    app:cardCornerRadius="12dp"
-    app:cardBackgroundColor="@color/surface">
+    app:cardBackgroundColor="#161B22"
+    app:cardCornerRadius="10dp"
+    app:cardElevation="0dp"
+    app:strokeColor="#30363D"
+    app:strokeWidth="1dp">
 
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="vertical"
-        android:padding="16dp">
+        android:orientation="horizontal">
 
-        <TextView
-            android:id="@+id/tvBranchName"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="main"
-            android:textSize="18sp"
-            android:textStyle="bold"
-            android:textColor="@color/text_primary" />
-
-        <TextView
-            android:id="@+id/tvBranchStatus"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="local only"
-            android:textSize="12sp"
-            android:textColor="@color/text_secondary"
-            android:layout_marginBottom="12dp" />
+        <!-- Current-branch accent stripe -->
+        <View
+            android:id="@+id/viewCurrentStripe"
+            android:layout_width="3dp"
+            android:layout_height="match_parent"
+            android:background="#238636"
+            android:visibility="gone" />
 
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="horizontal">
+            android:orientation="vertical"
+            android:padding="14dp">
 
-            <Button
-                android:id="@+id/btnCheckout"
-                android:layout_width="wrap_content"
+            <!-- Row 1: icon + name + badges -->
+            <LinearLayout
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="Switch"
-                style="@style/Widget.Material3.Button.TextButton"
+                android:gravity="center_vertical"
+                android:orientation="horizontal">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="⎇"
+                    android:textColor="#8B949E"
+                    android:textSize="14sp"
+                    android:layout_marginEnd="8dp" />
+
+                <TextView
+                    android:id="@+id/tvBranchName"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="main"
+                    android:textColor="#E6EDF3"
+                    android:textSize="15sp"
+                    android:textStyle="bold"
+                    android:fontFamily="monospace" />
+
+                <!-- Ahead badge -->
+                <TextView
+                    android:id="@+id/tvAhead"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="↑2"
+                    android:textColor="#3FB950"
+                    android:textSize="11sp"
+                    android:background="#1F3A2A"
+                    android:paddingHorizontal="6dp"
+                    android:paddingVertical="2dp"
+                    android:layout_marginEnd="4dp"
+                    android:visibility="gone" />
+
+                <!-- Behind badge -->
+                <TextView
+                    android:id="@+id/tvBehind"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="↓1"
+                    android:textColor="#D29922"
+                    android:textSize="11sp"
+                    android:background="#2D2000"
+                    android:paddingHorizontal="6dp"
+                    android:paddingVertical="2dp"
+                    android:visibility="gone" />
+            </LinearLayout>
+
+            <!-- Row 2: status line -->
+            <TextView
+                android:id="@+id/tvBranchStatus"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:layout_marginStart="22dp"
+                android:text="local only"
+                android:textColor="#8B949E"
                 android:textSize="12sp" />
 
-            <Button
-                android:id="@+id/btnRenameBranch"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="Rename"
-                style="@style/Widget.Material3.Button.TextButton"
-                android:textSize="12sp" />
+            <!-- Divider -->
+            <View
+                android:layout_width="match_parent"
+                android:layout_height="1dp"
+                android:layout_marginVertical="10dp"
+                android:background="#21262D" />
 
-            <Button
-                android:id="@+id/btnMergeBranch"
-                android:layout_width="wrap_content"
+            <!-- Row 3: action buttons -->
+            <LinearLayout
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="Merge"
-                style="@style/Widget.Material3.Button.TextButton"
-                android:textSize="12sp" />
+                android:orientation="horizontal"
+                android:gravity="end">
 
-            <Button
-                android:id="@+id/btnRebaseBranch"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="Rebase"
-                style="@style/Widget.Material3.Button.TextButton"
-                android:textSize="12sp" />
+                <Button
+                    android:id="@+id/btnCheckout"
+                    style="@style/Widget.Material3.Button.TextButton"
+                    android:layout_width="wrap_content"
+                    android:layout_height="32dp"
+                    android:text="Switch"
+                    android:textColor="#58A6FF"
+                    android:textSize="11sp"
+                    android:minWidth="0dp"
+                    android:paddingHorizontal="10dp" />
 
-            <Button
-                android:id="@+id/btnDeleteBranch"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="Delete"
-                style="@style/Widget.Material3.Button.TextButton"
-                android:textColor="@android:color/holo_red_light"
-                android:textSize="12sp" />
+                <Button
+                    android:id="@+id/btnRenameBranch"
+                    style="@style/Widget.Material3.Button.TextButton"
+                    android:layout_width="wrap_content"
+                    android:layout_height="32dp"
+                    android:text="Rename"
+                    android:textColor="#8B949E"
+                    android:textSize="11sp"
+                    android:minWidth="0dp"
+                    android:paddingHorizontal="10dp" />
+
+                <Button
+                    android:id="@+id/btnMergeBranch"
+                    style="@style/Widget.Material3.Button.TextButton"
+                    android:layout_width="wrap_content"
+                    android:layout_height="32dp"
+                    android:text="Merge"
+                    android:textColor="#3FB950"
+                    android:textSize="11sp"
+                    android:minWidth="0dp"
+                    android:paddingHorizontal="10dp" />
+
+                <Button
+                    android:id="@+id/btnRebaseBranch"
+                    style="@style/Widget.Material3.Button.TextButton"
+                    android:layout_width="wrap_content"
+                    android:layout_height="32dp"
+                    android:text="Rebase"
+                    android:textColor="#D2A8FF"
+                    android:textSize="11sp"
+                    android:minWidth="0dp"
+                    android:paddingHorizontal="10dp" />
+
+                <Button
+                    android:id="@+id/btnDeleteBranch"
+                    style="@style/Widget.Material3.Button.TextButton"
+                    android:layout_width="wrap_content"
+                    android:layout_height="32dp"
+                    android:text="Delete"
+                    android:textColor="#F85149"
+                    android:textSize="11sp"
+                    android:minWidth="0dp"
+                    android:paddingHorizontal="10dp" />
+            </LinearLayout>
         </LinearLayout>
     </LinearLayout>
 </com.google.android.material.card.MaterialCardView>

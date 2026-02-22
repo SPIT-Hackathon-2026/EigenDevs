@@ -1,93 +1,107 @@
 <?xml version="1.0" encoding="utf-8"?>
-<androidx.cardview.widget.CardView xmlns:android="http://schemas.android.com/apk/res/android"
+<com.google.android.material.card.MaterialCardView
+    xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:layout_marginBottom="12dp"
-    app:cardBackgroundColor="@color/surface"
-    app:cardCornerRadius="12dp"
-    app:cardElevation="0dp">
+    android:layout_marginHorizontal="12dp"
+    android:layout_marginBottom="8dp"
+    app:cardBackgroundColor="#161B22"
+    app:cardCornerRadius="10dp"
+    app:cardElevation="0dp"
+    app:strokeColor="#30363D"
+    app:strokeWidth="1dp">
 
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical"
-        android:padding="16dp">
+        android:padding="14dp">
 
+        <!-- Row 1: icon + name + SHA chip -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:gravity="center_vertical"
             android:orientation="horizontal">
-            
-            <ImageView
-                android:layout_width="20dp"
-                android:layout_height="20dp"
-                android:src="@android:drawable/ic_menu_agenda"
-                android:tint="@color/accent"
-                android:layout_marginEnd="8dp"/>
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="🏷"
+                android:textSize="16sp"
+                android:layout_marginEnd="10dp" />
 
             <TextView
                 android:id="@+id/tvTagName"
                 android:layout_width="0dp"
-                android:layout_weight="1"
                 android:layout_height="wrap_content"
+                android:layout_weight="1"
                 android:text="v1.0.0"
-                android:textColor="@color/text_primary"
-                android:textSize="17sp"
+                android:textColor="#E6EDF3"
+                android:textSize="16sp"
                 android:textStyle="bold" />
-                
+
+            <!-- SHA chip -->
             <TextView
                 android:id="@+id/tvTagSha"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="a1b2c3d4"
-                android:textColor="@color/text_secondary"
-                android:background="@drawable/bg_label"
-                android:paddingStart="6dp"
-                android:paddingEnd="6dp"
-                android:paddingTop="2dp"
-                android:paddingBottom="2dp"
+                android:text="a1b2c3d"
+                android:textColor="#8B949E"
                 android:textSize="11sp"
-                android:fontFamily="monospace"/>
+                android:fontFamily="monospace"
+                android:background="#21262D"
+                android:paddingHorizontal="8dp"
+                android:paddingVertical="3dp" />
         </LinearLayout>
 
+        <!-- Row 2: date -->
         <TextView
             android:id="@+id/tvTagDate"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Created on 22 Feb 2026"
-            android:textColor="@color/text_secondary"
-            android:textSize="12sp"
-            android:layout_marginTop="4dp"
-            android:layout_marginStart="28dp"/>
+            android:layout_marginTop="6dp"
+            android:layout_marginStart="26dp"
+            android:text="Created 22 Feb 2026"
+            android:textColor="#8B949E"
+            android:textSize="12sp" />
 
+        <!-- Divider -->
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            android:layout_marginVertical="10dp"
+            android:background="#21262D" />
+
+        <!-- Row 3: actions -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="16dp"
-            android:orientation="horizontal">
+            android:orientation="horizontal"
+            android:gravity="end">
 
             <Button
                 android:id="@+id/btnPushTag"
                 style="@style/Widget.Material3.Button.TonalButton"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:text="⬆️ Push"
+                android:layout_width="wrap_content"
+                android:layout_height="34dp"
+                android:text="↑ Push"
                 android:textSize="12sp"
-                android:layout_marginEnd="4dp" />
+                android:minWidth="0dp"
+                android:paddingHorizontal="14dp"
+                android:layout_marginEnd="8dp" />
 
             <Button
                 android:id="@+id/btnDeleteTag"
-                style="@style/Widget.Material3.Button.TonalButton"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:text="🗑️ Delete"
-                android:textColor="#FF5252"
+                style="@style/Widget.Material3.Button.TextButton"
+                android:layout_width="wrap_content"
+                android:layout_height="34dp"
+                android:text="Delete"
+                android:textColor="#F85149"
                 android:textSize="12sp"
-                android:layout_marginStart="4dp" />
+                android:minWidth="0dp"
+                android:paddingHorizontal="14dp" />
         </LinearLayout>
     </LinearLayout>
-</androidx.cardview.widget.CardView>
+</com.google.android.material.card.MaterialCardView>

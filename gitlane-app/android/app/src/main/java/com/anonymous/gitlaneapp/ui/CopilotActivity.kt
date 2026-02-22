@@ -807,6 +807,8 @@ private fun QuickPrompts(onTap: (String) -> Unit) {
     val chips = listOf(
         "🏥 Repo health",
         "🌿 List branches",
+        "📂 List files",
+        "📖 Read README.md",
         "🔍 Recent commits",
         "💡 Explain latest commit",
         "📝 Generate commit msg",

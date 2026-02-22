@@ -1,88 +1,129 @@
 <?xml version="1.0" encoding="utf-8"?>
-<com.google.android.material.card.MaterialCardView xmlns:android="http://schemas.android.com/apk/res/android"
+<com.google.android.material.card.MaterialCardView
+    xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:layout_marginBottom="12dp"
-    app:cardCornerRadius="12dp"
-    app:cardBackgroundColor="@color/surface">
+    android:layout_marginHorizontal="12dp"
+    android:layout_marginBottom="8dp"
+    app:cardBackgroundColor="#161B22"
+    app:cardCornerRadius="10dp"
+    app:cardElevation="0dp"
+    app:strokeColor="#30363D"
+    app:strokeWidth="1dp">
 
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical"
-        android:padding="16dp">
+        android:padding="14dp">
 
+        <!-- Row 1: icon + name + edit/remove -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:gravity="center_vertical">
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="⬡"
+                android:textColor="#58A6FF"
+                android:textSize="18sp"
+                android:layout_marginEnd="10dp" />
+
             <TextView
                 android:id="@+id/tvRemoteName"
                 android:layout_width="0dp"
-                android:layout_weight="1"
                 android:layout_height="wrap_content"
+                android:layout_weight="1"
                 android:text="origin"
-                android:textSize="18sp"
-                android:textStyle="bold"
-                android:textColor="@color/text_primary" />
+                android:textColor="#E6EDF3"
+                android:textSize="16sp"
+                android:textStyle="bold" />
+
             <Button
                 android:id="@+id/btnEditRemote"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="Edit"
                 style="@style/Widget.Material3.Button.TextButton"
-                android:textSize="11sp" />
+                android:layout_width="wrap_content"
+                android:layout_height="32dp"
+                android:text="Edit"
+                android:textColor="#58A6FF"
+                android:textSize="11sp"
+                android:minWidth="0dp"
+                android:paddingHorizontal="10dp" />
+
             <Button
                 android:id="@+id/btnDeleteRemote"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="Remove"
                 style="@style/Widget.Material3.Button.TextButton"
-                android:textColor="@android:color/holo_red_light"
-                android:textSize="11sp" />
+                android:layout_width="wrap_content"
+                android:layout_height="32dp"
+                android:text="Remove"
+                android:textColor="#F85149"
+                android:textSize="11sp"
+                android:minWidth="0dp"
+                android:paddingHorizontal="10dp" />
         </LinearLayout>
 
+        <!-- Row 2: URL -->
         <TextView
             android:id="@+id/tvRemoteUrl"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
+            android:layout_marginTop="6dp"
+            android:layout_marginStart="28dp"
             android:text="https://github.com/user/repo.git"
-            android:textSize="11sp"
-            android:textColor="@color/text_secondary"
-            android:layout_marginBottom="16dp" />
+            android:textSize="12sp"
+            android:textColor="#8B949E"
+            android:fontFamily="monospace"
+            android:singleLine="true"
+            android:ellipsize="middle" />
 
+        <!-- Divider -->
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            android:layout_marginVertical="10dp"
+            android:background="#21262D" />
+
+        <!-- Row 3: action buttons -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="horizontal">
+
             <Button
                 android:id="@+id/btnFetch"
+                style="@style/Widget.Material3.Button.OutlinedButton"
                 android:layout_width="0dp"
                 android:layout_weight="1"
-                android:layout_height="wrap_content"
-                android:text="Fetch"
-                style="@style/Widget.Material3.Button.OutlinedButton"
+                android:layout_height="36dp"
+                android:text="↓ Fetch"
                 android:textSize="12sp"
+                android:minWidth="0dp"
                 android:layout_marginEnd="4dp" />
+
             <Button
                 android:id="@+id/btnPull"
+                style="@style/Widget.Material3.Button.OutlinedButton"
                 android:layout_width="0dp"
                 android:layout_weight="1"
-                android:layout_height="wrap_content"
-                android:text="Pull"
-                style="@style/Widget.Material3.Button.OutlinedButton"
+                android:layout_height="36dp"
+                android:text="⇓ Pull"
                 android:textSize="12sp"
+                android:minWidth="0dp"
                 android:layout_marginEnd="4dp" />
+
             <Button
                 android:id="@+id/btnPush"
+                style="@style/Widget.Material3.Button"
                 android:layout_width="0dp"
                 android:layout_weight="1"
-                android:layout_height="wrap_content"
-                android:text="Push"
-                style="@style/Widget.Material3.Button"
-                android:textSize="12sp" />
+                android:layout_height="36dp"
+                android:text="↑ Push"
+                android:textSize="12sp"
+                android:minWidth="0dp" />
         </LinearLayout>
     </LinearLayout>
 </com.google.android.material.card.MaterialCardView>

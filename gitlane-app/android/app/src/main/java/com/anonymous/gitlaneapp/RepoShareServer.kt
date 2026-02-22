@@ -26,8 +26,16 @@ class RepoShareServer(
 
     override fun serve(session: IHTTPSession): Response {
         return if (session.uri == "/$repoName.bundle") {
+            // Use fixed-length response (with Content-Length header) instead of chunked
+            // transfer encoding. Chunked encoding causes "unexpected end of stream" errors
+            // on the receiving device's OkHttp/Android HTTP stack.
             val fis = FileInputStream(bundleFile)
-            newChunkedResponse(Response.Status.OK, "application/octet-stream", fis)
+            newFixedLengthResponse(
+                Response.Status.OK,
+                "application/octet-stream",
+                fis,
+                bundleFile.length()
+            )
         } else {
             newFixedLengthResponse(
                 Response.Status.NOT_FOUND,

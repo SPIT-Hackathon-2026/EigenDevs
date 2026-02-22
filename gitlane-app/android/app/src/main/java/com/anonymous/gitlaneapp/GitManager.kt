@@ -2,6 +2,8 @@ package com.anonymous.gitlaneapp
 
 import android.content.Context
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import org.eclipse.jgit.api.Git
 import org.eclipse.jgit.api.ListBranchCommand
@@ -48,6 +50,31 @@ class GitManager(context: Context) {
 
     val gitLaneRoot: File = File(context.filesDir, "GitLane").also { it.mkdirs() }
     private val defaultAuthor = PersonIdent("GitLane User", "user@gitlane.app")
+
+    /**
+     * Per-repo mutexes so that concurrent coroutines never race on the same index.
+     * A fresh coroutine calling stageAll while another is mid-commit would cause
+     * the exact 'Cannot lock index' error seen in the UI.
+     */
+    private val repoMutexes = java.util.concurrent.ConcurrentHashMap<String, Mutex>()
+    private fun mutexFor(repoDir: File) =
+        repoMutexes.getOrPut(repoDir.absolutePath) { Mutex() }
+
+    /**
+     * Deletes stale JGit lock files that are left behind after a crash or interrupted
+     * operation. Without this, every subsequent git command fails with:
+     *   "Cannot lock /…/.git/index — ensure no other process has an open file handle"
+     */
+    private fun clearStaleLocks(repoDir: File) {
+        val gitDir = File(repoDir, ".git")
+        listOf("index.lock", "HEAD.lock", "MERGE_HEAD.lock", "packed-refs.lock").forEach { name ->
+            val lock = File(gitDir, name)
+            if (lock.exists()) {
+                val deleted = lock.delete()
+                android.util.Log.w("GitManager", "Stale lock found and ${if (deleted) "deleted" else "NOT deleted"}: ${lock.absolutePath}")
+            }
+        }
+    }
 
     // ═══════════════════════════════════════════════════════════════════════════
     // REPO MANAGEMENT
@@ -115,24 +142,74 @@ class GitManager(context: Context) {
     // ═══════════════════════════════════════════════════════════════════════════
 
     suspend fun stageAll(repoDir: File) = withContext(Dispatchers.IO) {
-        openGit(repoDir).use { it.add().addFilepattern(".").call() }
+        mutexFor(repoDir).withLock {
+            clearStaleLocks(repoDir)
+            openGit(repoDir).use { it.add().addFilepattern(".").call() }
+        }
+    }
+
+    /** Stage a single file by its repo-relative path (git add <path>). */
+    suspend fun stageFile(repoDir: File, relativePath: String) = withContext(Dispatchers.IO) {
+        mutexFor(repoDir).withLock {
+            clearStaleLocks(repoDir)
+            openGit(repoDir).use { git ->
+                // For conflict resolution: git add clears the staged conflict entries (stages 1/2/3)
+                // and replaces them with a single stage-0 entry from the working tree file.
+                git.add().addFilepattern(relativePath).call()
+            }
+        }
+    }
+
+    /**
+     * All-in-one: write resolved content to disk AND stage it in one locked JGit session.
+     * This eliminates any gap between writing and staging that could leave the file
+     * appearing conflicted.
+     */
+    suspend fun resolveConflictFile(
+        repoDir: File,
+        relativePath: String,
+        resolvedContent: String
+    ) = withContext(Dispatchers.IO) {
+        mutexFor(repoDir).withLock {
+            clearStaleLocks(repoDir)
+
+            // 1. Write resolved content atomically
+            val targetFile = File(repoDir, relativePath)
+            val tempFile   = File(repoDir, "$relativePath.gitlane_tmp")
+            tempFile.writeText(resolvedContent, Charsets.UTF_8)
+            if (!tempFile.renameTo(targetFile)) {
+                targetFile.writeText(resolvedContent, Charsets.UTF_8)
+                tempFile.delete()
+            }
+
+            // 2. Stage it within the same lock — clears conflict entries from the index
+            openGit(repoDir).use { git ->
+                git.add().addFilepattern(relativePath).call()
+            }
+        }
     }
 
     /** Stage removal of a specific tracked file (equivalent to git rm --cached <path>). */
     suspend fun stageRemoval(repoDir: File, relativePath: String) = withContext(Dispatchers.IO) {
-        openGit(repoDir).use { git ->
-            git.rm().addFilepattern(relativePath).setCached(false).call()
+        mutexFor(repoDir).withLock {
+            clearStaleLocks(repoDir)
+            openGit(repoDir).use { git ->
+                git.rm().addFilepattern(relativePath).setCached(false).call()
+            }
         }
     }
 
     suspend fun commit(repoDir: File, message: String): String = withContext(Dispatchers.IO) {
-        openGit(repoDir).use { git ->
-            val commit = git.commit()
-                .setMessage(message)
-                .setAuthor(defaultAuthor)
-                .setCommitter(defaultAuthor)
-                .call()
-            commit.abbreviate(8).name()
+        mutexFor(repoDir).withLock {
+            clearStaleLocks(repoDir)
+            openGit(repoDir).use { git ->
+                val commit = git.commit()
+                    .setMessage(message)
+                    .setAuthor(defaultAuthor)
+                    .setCommitter(defaultAuthor)
+                    .call()
+                commit.abbreviate(8).name()
+            }
         }
     }
 
@@ -173,15 +250,51 @@ class GitManager(context: Context) {
      * Reverts local changes to a specific file (git checkout -- path).
      */
     suspend fun discardChanges(repoDir: File, path: String) = withContext(Dispatchers.IO) {
-        openGit(repoDir).use { git ->
-            git.checkout().addPath(path).call()
+        mutexFor(repoDir).withLock {
+            clearStaleLocks(repoDir)
+            openGit(repoDir).use { git ->
+                git.checkout().addPath(path).call()
+            }
         }
     }
 
     suspend fun getLog(repoDir: File): List<CommitInfo> = withContext(Dispatchers.IO) {
         try {
             openGit(repoDir).use { git ->
-                git.log().call().map { rev ->
+                val revs = git.log().call().toList()
+                val repo  = git.repository
+                revs.mapIndexed { idx, rev ->
+                    // Compute diff stats for first 50 commits only (perf guard)
+                    var adds = 0; var dels = 0
+                    if (idx < 50) {
+                        try {
+                            val out = ByteArrayOutputStream()
+                            DiffFormatter(out).use { df ->
+                                df.setRepository(repo)
+                                df.setDiffComparator(RawTextComparator.DEFAULT)
+                                df.isDetectRenames = true
+                                val parentTree = if (rev.parentCount > 0) {
+                                    val rw = RevWalk(repo)
+                                    val p = rw.parseCommit(rev.parents[0].id)
+                                    CanonicalTreeParser().apply {
+                                        reset(repo.newObjectReader(), p.tree)
+                                    }
+                                } else EmptyTreeIterator()
+                                val thisTree = CanonicalTreeParser().apply {
+                                    reset(repo.newObjectReader(), rev.tree)
+                                }
+                                df.scan(parentTree, thisTree).forEach { entry ->
+                                    val eh = df.toFileHeader(entry)
+                                    eh.hunks.forEach { h ->
+                                        h.toEditList().forEach { e ->
+                                            adds += e.endB - e.beginB
+                                            dels += e.endA - e.beginA
+                                        }
+                                    }
+                                }
+                            }
+                        } catch (_: Exception) {}
+                    }
                     CommitInfo(
                         sha     = rev.abbreviate(8).name(),
                         message = rev.shortMessage,
@@ -189,9 +302,11 @@ class GitManager(context: Context) {
                         date    = SimpleDateFormat("dd MMM yyyy HH:mm", Locale.getDefault())
                             .format(Date(rev.commitTime * 1000L)),
                         parents = rev.parents.map { it.abbreviate(8).name() },
-                        isConflict = rev.fullMessage.contains("Conflict", ignoreCase = true) || 
+                        isConflict = rev.fullMessage.contains("Conflict", ignoreCase = true) ||
                                      rev.fullMessage.contains("Resolved", ignoreCase = true) ||
-                                     rev.parentCount > 1 && rev.fullMessage.lowercase().contains("merge")
+                                     rev.parentCount > 1 && rev.fullMessage.lowercase().contains("merge"),
+                        additions = adds,
+                        deletions = dels
                     )
                 }
             }
@@ -783,7 +898,9 @@ data class CommitInfo(
     val author: String,
     val date: String,
     val parents: List<String> = emptyList(),
-    val isConflict: Boolean = false
+    val isConflict: Boolean = false,
+    val additions: Int = 0,
+    val deletions: Int = 0
 )
 
 data class HistoryUiState(

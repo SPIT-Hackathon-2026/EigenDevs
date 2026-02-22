@@ -7,15 +7,20 @@ import com.anonymous.gitlaneapp.data.SettingsRepository
 import com.anonymous.gitlaneapp.data.api.GroqApiService
 import com.anonymous.gitlaneapp.data.api.GroqMessage
 import com.anonymous.gitlaneapp.data.api.GroqRequest
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 import java.io.File
+import java.net.InetSocketAddress
+import java.net.Socket
 import java.util.*
+import java.util.concurrent.TimeUnit
 
 sealed class ConflictSegment {
     data class Normal(val content: String) : ConflictSegment()
@@ -57,13 +62,27 @@ class MergeConflictViewModel(
 
     private val groqService by lazy {
         val logging = HttpLoggingInterceptor().apply { level = HttpLoggingInterceptor.Level.BODY }
-        val client = OkHttpClient.Builder().addInterceptor(logging).build()
+        val client = OkHttpClient.Builder()
+            .addInterceptor(logging)
+            .connectTimeout(10, TimeUnit.SECONDS)
+            .readTimeout(30, TimeUnit.SECONDS)
+            .build()
         Retrofit.Builder()
             .baseUrl("https://api.groq.com/openai/")
             .addConverterFactory(GsonConverterFactory.create())
             .client(client)
             .build()
             .create(GroqApiService::class.java)
+    }
+
+    /** Quick connectivity probe — tries to open a TCP socket to Groq (non-blocking, 3 s timeout). */
+    private suspend fun isGroqReachable(): Boolean = withContext(Dispatchers.IO) {
+        try {
+            Socket().use { sock ->
+                sock.connect(InetSocketAddress("api.groq.com", 443), 3_000)
+                true
+            }
+        } catch (_: Exception) { false }
     }
 
     init {
@@ -198,15 +217,28 @@ class MergeConflictViewModel(
     fun explainConflictWithAi(index: Int) {
         val apiKey = settings.getGroqApiKey()
         if (apiKey.isNullOrBlank()) {
-            _uiState.value = _uiState.value.copy(error = "Groq API Key missing. Please set it in Settings.")
+            _uiState.value = _uiState.value.copy(
+                error = "⚠️ Groq API key not set. Go to Settings → Groq API Key."
+            )
             return
         }
 
         val segment = _uiState.value.segments[index] as? ConflictSegment.Conflict ?: return
-        val fileName = _uiState.value.fileName
+        val fileName  = _uiState.value.fileName
         val extension = fileName.substringAfterLast(".", "txt")
-        
+
         viewModelScope.launch {
+            // --- Connectivity pre-check ---
+            val reachable = isGroqReachable()
+            if (!reachable) {
+                val updatedSegments = _uiState.value.segments.toMutableList()
+                updatedSegments[index] = segment.copy(isAiLoading = false)
+                _uiState.value = _uiState.value.copy(
+                    segments = updatedSegments,
+                    error = "📡 No internet. AI Explain needs Wi-Fi / mobile data to reach Groq."
+                )
+                return@launch
+            }
             val updatedSegments = _uiState.value.segments.toMutableList()
             updatedSegments[index] = segment.copy(isAiLoading = true)
             _uiState.value = _uiState.value.copy(segments = updatedSegments)
@@ -295,30 +327,36 @@ class MergeConflictViewModel(
     }
 
     fun save(onSuccess: () -> Unit) {
+        val unresolvedCount = _uiState.value.segments.count {
+            it is ConflictSegment.Conflict && it.resolution == ResolutionType.NONE
+        }
+        if (unresolvedCount > 0) {
+            _uiState.value = _uiState.value.copy(
+                error = "⚠️ $unresolvedCount conflict(s) still unresolved. Tap ACCEPT on each block first."
+            )
+            return
+        }
+
         viewModelScope.launch {
-            _uiState.value = _uiState.value.copy(isSaving = true)
+            _uiState.value = _uiState.value.copy(isSaving = true, error = null)
             try {
                 val finalContent = _uiState.value.segments.joinToString("\n") { segment ->
                     when (segment) {
-                        is ConflictSegment.Normal -> segment.content
-                        is ConflictSegment.Conflict -> segment.resolvedContent ?: (
-                            "<<<<<<< HEAD\n${segment.headContent}\n=======\n${segment.incomingContent}\n>>>>>>>"
-                        )
+                        is ConflictSegment.Normal   -> segment.content
+                        is ConflictSegment.Conflict -> segment.resolvedContent
+                            ?: "${segment.headContent}\n${segment.incomingContent}"
                     }
                 }
-                
-                // Atomic write using temp file
-                val tempFile = File(repoDir, "$relativePath.tmp")
-                tempFile.writeText(finalContent)
-                val targetFile = File(repoDir, relativePath)
-                if (tempFile.renameTo(targetFile)) {
-                    onSuccess()
-                } else {
-                    targetFile.writeText(finalContent) // fallback
-                    onSuccess()
-                }
+
+                // Atomic write-and-stage in one locked JGit session — eliminates conflict status
+                git.resolveConflictFile(repoDir, relativePath, finalContent)
+
+                _uiState.value = _uiState.value.copy(isSaving = false)
+                onSuccess()
             } catch (e: Exception) {
-                _uiState.value = _uiState.value.copy(error = "Save failed: ${e.message}", isSaving = false)
+                _uiState.value = _uiState.value.copy(
+                    error = "Save failed: ${e.message}", isSaving = false
+                )
             }
         }
     }

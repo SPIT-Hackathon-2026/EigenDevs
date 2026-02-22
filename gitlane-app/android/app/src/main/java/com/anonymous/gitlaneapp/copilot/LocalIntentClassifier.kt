@@ -15,6 +15,7 @@ object LocalIntentClassifier {
         object ListTags      : LocalIntent()
         object CurrentBranch : LocalIntent()
         object GitStatus     : LocalIntent()
+        object ListFiles     : LocalIntent()
 
         data class CreateBranch(val name: String, val checkout: Boolean = true) : LocalIntent()
         data class CheckoutBranch(val name: String) : LocalIntent()
@@ -28,7 +29,8 @@ object LocalIntentClassifier {
 
         data class CreateTag(val name: String, val message: String? = null) : LocalIntent()
         data class CreateFile(val filename: String, val content: String = "") : LocalIntent()
-        
+        data class ReadFile(val path: String) : LocalIntent()
+
         object GenerateReadme    : LocalIntent()
         object GenerateCommitMsg : LocalIntent()
         object ExplainConflict   : LocalIntent()
@@ -95,6 +97,8 @@ object LocalIntentClassifier {
 
         if (q.matchesAny("list tags", "show tags", "tags", "releases")) return LocalIntent.ListTags
 
+        if (q.matchesAny("list files", "show files", "what files", "files in repo", "file list", "ls", "dir")) return LocalIntent.ListFiles
+
         if (q.matchesAny("generate readme", "create readme", "readme")) return LocalIntent.GenerateReadme
 
         if (q.matchesAny("explain conflict", "merge conflict", "resolve conflict")) return LocalIntent.ExplainConflict
@@ -114,6 +118,12 @@ object LocalIntentClassifier {
         commitMsgPat.find(q)?.let { m ->
             val msg = m.groupValues[1].trim().removeSurrounding("\"").removeSurrounding("'")
             if (msg.isNotBlank()) return LocalIntent.StageAndCommit(msg)
+        }
+
+        // Read File
+        Regex("(?:read|show|open|cat|display|print)(?:[\\s]+(?:file|content of)?[\\s]*)[\"']?([\\w./\\-]+(?:\\.[a-z]+))[\"']?").find(q)?.let { m ->
+            val path = m.groupValues[1].trim()
+            if (path.isNotBlank()) return LocalIntent.ReadFile(path)
         }
 
         return LocalIntent.Unknown

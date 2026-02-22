@@ -81,14 +81,32 @@ class ConflictResolutionActivity : AppCompatActivity() {
 
     private fun loadConflicts() {
         lifecycleScope.launch {
-            val status = git.getStatus(repoDir)
-            val conflictFiles = status.conflicting.map { File(repoDir, it) }
-            adapter.submitList(conflictFiles)
+            try {
+                val status = git.getStatus(repoDir)
 
-            if (conflictFiles.isEmpty()) {
-                Toast.makeText(this@ConflictResolutionActivity, "✅ All conflicts resolved! Stage and commit now.", Toast.LENGTH_LONG).show()
-                setResult(RESULT_OK)
-                finish()
+                // Source of truth = JGit conflicting list + any file still containing <<< markers
+                val byJGit = status.conflicting.map { File(repoDir, it) }
+                val byContent = repoDir.walkTopDown()
+                    .filter { it.isFile && !it.absolutePath.contains("/.git") && !it.absolutePath.contains("\\.git") }
+                    .filter { f ->
+                        try { f.readText(Charsets.UTF_8).contains("<<<<<<< ") } catch (_: Exception) { false }
+                    }.toList()
+
+                // Union: files flagged by either check
+                val conflictFiles = (byJGit + byContent).distinctBy { it.canonicalPath }
+                adapter.submitList(conflictFiles)
+
+                if (conflictFiles.isEmpty()) {
+                    Toast.makeText(
+                        this@ConflictResolutionActivity,
+                        "✅ All conflicts resolved! Tap commit to complete the merge.",
+                        Toast.LENGTH_LONG
+                    ).show()
+                    setResult(RESULT_OK)
+                    finish()
+                }
+            } catch (e: Exception) {
+                Toast.makeText(this@ConflictResolutionActivity, "Error checking conflicts: ${e.message}", Toast.LENGTH_SHORT).show()
             }
         }
     }

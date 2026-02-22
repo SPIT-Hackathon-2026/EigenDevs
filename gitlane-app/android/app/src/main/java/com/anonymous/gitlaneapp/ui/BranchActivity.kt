@@ -340,6 +340,9 @@ class BranchAdapter(
     inner class VH(v: View) : RecyclerView.ViewHolder(v) {
         val tvName:     TextView = v.findViewById(R.id.tvBranchName)
         val tvStatus:   TextView = v.findViewById(R.id.tvBranchStatus)
+        val tvAhead:    TextView = v.findViewById(R.id.tvAhead)
+        val tvBehind:   TextView = v.findViewById(R.id.tvBehind)
+        val stripe:     View     = v.findViewById(R.id.viewCurrentStripe)
         val btnCheck:   Button   = v.findViewById(R.id.btnCheckout)
         val btnRename:  Button   = v.findViewById(R.id.btnRenameBranch)
         val btnMerge:   Button   = v.findViewById(R.id.btnMergeBranch)
@@ -354,29 +357,43 @@ class BranchAdapter(
 
     override fun onBindViewHolder(holder: VH, position: Int) {
         val b = items[position]
-        holder.tvName.text   = if (b.isCurrent) "★ ${b.name}  (current)" else b.name
+
+        // Name — no star prefix; current status is shown via stripe
+        holder.tvName.text = b.name
+
+        // Current branch: show green left stripe + "current branch" status
+        holder.stripe.visibility = if (b.isCurrent) View.VISIBLE else View.GONE
+
+        // Status text
         holder.tvStatus.text = when {
-            b.upstream != null -> "↑${b.ahead} ↓${b.behind}  tracks ${b.upstream}"
-            else               -> "local only"
+            b.isCurrent    -> "✓ current branch"
+            b.upstream != null -> "tracks ${b.upstream}"
+            else           -> "local only"
         }
+
+        // Ahead / Behind badges
+        if (!b.isCurrent && b.ahead > 0) {
+            holder.tvAhead.text = "↑${b.ahead}"
+            holder.tvAhead.visibility = View.VISIBLE
+        } else { holder.tvAhead.visibility = View.GONE }
+
+        if (!b.isCurrent && b.behind > 0) {
+            holder.tvBehind.text = "↓${b.behind}"
+            holder.tvBehind.visibility = View.VISIBLE
+        } else { holder.tvBehind.visibility = View.GONE }
+
         holder.btnCheck.setOnClickListener  { onCheckout(b) }
         holder.btnRename.setOnClickListener { onRename(b) }
         holder.btnMerge.setOnClickListener  { onMerge(b) }
         holder.btnRebase.setOnClickListener { onRebase(b) }
         holder.btnDelete.setOnClickListener { onDelete(b) }
-        
-        holder.btnMerge.visibility = if (b.isCurrent) View.GONE else View.VISIBLE
+
+        holder.btnMerge.visibility  = if (b.isCurrent) View.GONE else View.VISIBLE
         holder.btnRebase.visibility = if (b.isCurrent) View.GONE else View.VISIBLE
-        
-        // Disable if no new commits to merge/rebase
-        val hasNew = b.aheadOfCurrent > 0
-        holder.btnMerge.isEnabled = hasNew
-        holder.btnRebase.isEnabled = hasNew
-        holder.btnMerge.alpha = if (hasNew) 1f else 0.4f
-        holder.btnRebase.alpha = if (hasNew) 1f else 0.4f
-        
-        if (!hasNew && !b.isCurrent) {
-            holder.tvStatus.text = "Up to date with current"
-        }
+
+        holder.btnMerge.isEnabled  = true
+        holder.btnRebase.isEnabled = true
+        holder.btnMerge.alpha  = 1f
+        holder.btnRebase.alpha = 1f
     }
 }

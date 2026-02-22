@@ -39,9 +39,21 @@ class HistoryViewModel(
             _uiState.value = _uiState.value.copy(isLoading = true)
             try {
                 val commits = git.getLog(repoDir)
-                // In a real app, we'd fetch actual branch data from git.listBranches
-                val layout = graphEngine.calculateLayout(commits, emptyMap())
-                
+                // Build sha -> [branchName] map so the graph engine assigns correct lanes
+                val branches = git.listBranches(repoDir)
+                val branchMap = mutableMapOf<String, MutableList<String>>()
+                branches.forEach { b ->
+                    // listBranches returns abbreviated SHA via BranchInfo — resolve full SHA
+                    branchMap.getOrPut(b.name) { mutableListOf() } // keyed by full name first
+                }
+                // Key graph engine on abbreviated commit SHA matching CommitInfo.sha
+                val shaMap = mutableMapOf<String, MutableList<String>>()
+                branches.forEach { b ->
+                    // Use the first commit that matches the branch head
+                    commits.find { c -> b.name.endsWith(c.sha) || c.sha.startsWith(b.name.takeLast(8)) }
+                        ?.let { c -> shaMap.getOrPut(c.sha) { mutableListOf() }.add(b.name) }
+                }
+                val layout = graphEngine.calculateLayout(commits, shaMap)
                 _uiState.value = _uiState.value.copy(
                     commits = commits,
                     graphNodes = layout.nodes,
